@@ -1,0 +1,48 @@
+{
+    "name": "vtinnovations/draggo",
+    "type": "contao-bundle",
+    "description": "Draggo — Frontend page builder (Elementor-style) for Contao 5 with an AI-assisted backend that generates and extends Contao content elements within controlled, validated boundaries.",
+    "license": "LGPL-3.0-or-later",
+    "homepage": "https://www.v-t.one",
+    "authors": [
+        {
+            "name": "V&T Innovations Team",
+            "homepage": "https://www.v-t.one"
+        }
+    ],
+    "require": {
+        "php": "^8.2",
+        "ext-json": "*",
+        "ext-sodium": "*",
+        "contao/core-bundle": "^5.3",
+        "doctrine/dbal": "^3.6 || ^4.0",
+        "symfony/console": "^6.4 || ^7.0",
+        "symfony/http-client": "^6.4 || ^7.0",
+        "symfony/http-foundation": "^6.4 || ^7.0",
+        "twig/twig": "^3.0"
+    },
+    "require-dev": {
+        "contao/manager-plugin": "^2.0",
+        "phpunit/phpunit": "^10.0 || ^11.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Vtinnovations\\Draggo\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Vtinnovations\\Draggo\\Tests\\": "tests/"
+        }
+    },
+    "extra": {
+        "contao-manager-plugin": "Vtinnovations\\Draggo\\ContaoManager\\Plugin"
+    },
+    "config": {
+        "allow-plugins": {
+            "contao/manager-plugin": true,
+            "contao-components/installer": true,
+            "php-http/discovery": true
+        }
+    }
+}

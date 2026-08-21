@@ -1,0 +1,615 @@
+# All Draggo routes live under /contao so they inherit the Contao backend
+# firewall (authentication enforced by core). Mutations additionally validate
+# REQUEST_TOKEN inside the controllers via RequestGuard.
+
+# ── Licence management (Contao → Settings) ──────────────────────────
+# The three controls in the "Draggo Licence management" section post here.
+# Backend-scoped, so Contao's firewall authenticates before the controller
+# runs; the controller then re-checks admin rights and REQUEST_TOKEN itself.
+draggo_licence_activate:
+    path: /contao/draggo/licence/activate
+    controller: Vtinnovations\Draggo\Controller\Api\ActivationApiController::activate
+    methods: [POST]
+    defaults:
+        _scope: backend
+
+draggo_licence_refresh:
+    path: /contao/draggo/licence/refresh
+    controller: Vtinnovations\Draggo\Controller\Api\ActivationApiController::refresh
+    methods: [POST]
+    defaults:
+        _scope: backend
+
+draggo_licence_remove:
+    path: /contao/draggo/licence/remove
+    controller: Vtinnovations\Draggo\Controller\Api\ActivationApiController::remove
+    methods: [POST]
+    defaults:
+        _scope: backend
+
+# Server-initiated record push. Fixed by the registry protocol and therefore
+# NOT backend-scoped: it carries no session and no browser CSRF token because
+# it is server-to-server. It is authenticated cryptographically instead — see
+# InboundExchange. GET is answered 405 (not 404) so a misconfiguration is
+# distinguishable from a missing route.
+draggo_licence_updater:
+    path: /rest/api/v1/draggo-license-updater
+    controller: Vtinnovations\Draggo\Controller\Api\ServiceHookController
+
+# Editor is PAGE-scoped: one Draggo session edits a whole tl_page (all its
+# articles + their content elements).
+draggo_editor:
+    path: /contao/draggo/edit/{page}
+    controller: Vtinnovations\Draggo\Controller\EditorController::edit
+    requirements:
+        page: \d+
+    defaults:
+        _scope: backend
+
+draggo_api_page_elements:
+    path: /contao/draggo/api/page/{id}/elements
+    controller: Vtinnovations\Draggo\Controller\Api\ElementApiController::listPage
+    methods: [GET]
+    requirements:
+        id: \d+
+    defaults:
+        _scope: backend
+
+draggo_api_page_frame:
+    path: /contao/draggo/api/page/{id}/frame
+    controller: Vtinnovations\Draggo\Controller\Api\ElementApiController::frame
+    methods: [GET]
+    requirements:
+        id: \d+
+    defaults:
+        _scope: backend
+
+draggo_api_page_siblings:
+    path: /contao/draggo/api/page/{id}/siblings
+    controller: Vtinnovations\Draggo\Controller\Api\ElementApiController::pageSiblings
+    methods: [GET]
+    requirements:
+        id: \d+
+    defaults:
+        _scope: backend
+
+draggo_api_elements:
+    path: /contao/draggo/api/article/{id}/elements
+    controller: Vtinnovations\Draggo\Controller\Api\ElementApiController::list
+    methods: [GET]
+    requirements:
+        id: \d+
+    defaults:
+        _scope: backend
+
+draggo_api_element_create:
+    path: /contao/draggo/api/article/{id}/element
+    controller: Vtinnovations\Draggo\Controller\Api\ElementApiController::create
+    methods: [POST]
+    requirements:
+        id: \d+
+    defaults:
+        _scope: backend
+
+draggo_api_reorder:
+    path: /contao/draggo/api/article/{id}/reorder
+    controller: Vtinnovations\Draggo\Controller\Api\ElementApiController::reorder
+    methods: [POST]
+    requirements:
+        id: \d+
+    defaults:
+        _scope: backend
+
+draggo_api_element_update:
+    path: /contao/draggo/api/element/{id}
+    controller: Vtinnovations\Draggo\Controller\Api\ElementApiController::update
+    methods: [PATCH]
+    requirements:
+        id: \d+
+    defaults:
+        _scope: backend
+
+draggo_api_element_delete:
+    path: /contao/draggo/api/element/{id}
+    controller: Vtinnovations\Draggo\Controller\Api\ElementApiController::delete
+    methods: [DELETE]
+    requirements:
+        id: \d+
+    defaults:
+        _scope: backend
+
+draggo_api_element_convert_grid:
+    path: /contao/draggo/api/element/{id}/convert-grid
+    controller: Vtinnovations\Draggo\Controller\Api\ElementApiController::convertGrid
+    methods: [POST]
+    requirements:
+        id: \d+
+    defaults:
+        _scope: backend
+
+draggo_api_element_restructure:
+    path: /contao/draggo/api/element/{id}/restructure
+    controller: Vtinnovations\Draggo\Controller\Api\ElementApiController::restructure
+    methods: [POST]
+    requirements:
+        id: \d+
+    defaults:
+        _scope: backend
+
+draggo_api_element_duplicate:
+    path: /contao/draggo/api/element/{id}/duplicate
+    controller: Vtinnovations\Draggo\Controller\Api\ElementApiController::duplicate
+    methods: [POST]
+    requirements:
+        id: \d+
+    defaults:
+        _scope: backend
+
+draggo_api_article_paste:
+    path: /contao/draggo/api/article/{id}/paste
+    controller: Vtinnovations\Draggo\Controller\Api\ElementApiController::pasteInArticle
+    methods: [POST]
+    requirements:
+        id: \d+
+    defaults:
+        _scope: backend
+
+draggo_api_unit_paste:
+    path: /contao/draggo/api/unit/{id}/paste
+    controller: Vtinnovations\Draggo\Controller\Api\ElementApiController::pasteInUnit
+    methods: [POST]
+    requirements:
+        id: \d+
+    defaults:
+        _scope: backend
+
+draggo_api_article_rename:
+    path: /contao/draggo/api/article/{id}/rename
+    controller: Vtinnovations\Draggo\Controller\Api\ElementApiController::renameArticle
+    methods: [POST]
+    requirements:
+        id: \d+
+    defaults:
+        _scope: backend
+
+draggo_api_components:
+    path: /contao/draggo/api/components
+    controller: Vtinnovations\Draggo\Controller\Api\ElementApiController::listComponents
+    methods: [GET]
+    defaults:
+        _scope: backend
+
+draggo_api_component_save:
+    path: /contao/draggo/api/element/{id}/save-component
+    controller: Vtinnovations\Draggo\Controller\Api\ElementApiController::saveComponent
+    methods: [POST]
+    requirements:
+        id: \d+
+    defaults:
+        _scope: backend
+
+draggo_api_component_delete:
+    path: /contao/draggo/api/component/{id}
+    controller: Vtinnovations\Draggo\Controller\Api\ElementApiController::deleteComponent
+    methods: [DELETE]
+    requirements:
+        id: \d+
+    defaults:
+        _scope: backend
+
+draggo_api_component_insert_article:
+    path: /contao/draggo/api/article/{id}/component
+    controller: Vtinnovations\Draggo\Controller\Api\ElementApiController::insertComponentArticle
+    methods: [POST]
+    requirements:
+        id: \d+
+    defaults:
+        _scope: backend
+
+draggo_api_component_insert_unit:
+    path: /contao/draggo/api/unit/{id}/component
+    controller: Vtinnovations\Draggo\Controller\Api\ElementApiController::insertComponentUnit
+    methods: [POST]
+    requirements:
+        id: \d+
+    defaults:
+        _scope: backend
+
+draggo_api_template_insert_article:
+    path: /contao/draggo/api/article/{id}/template
+    controller: Vtinnovations\Draggo\Controller\Api\ElementApiController::insertTemplateArticle
+    methods: [POST]
+    requirements:
+        id: \d+
+    defaults:
+        _scope: backend
+
+draggo_api_template_insert_unit:
+    path: /contao/draggo/api/unit/{id}/template
+    controller: Vtinnovations\Draggo\Controller\Api\ElementApiController::insertTemplateUnit
+    methods: [POST]
+    requirements:
+        id: \d+
+    defaults:
+        _scope: backend
+
+draggo_api_container_template:
+    path: /contao/draggo/api/page/{id}/container-template
+    controller: Vtinnovations\Draggo\Controller\Api\ElementApiController::createContainerTemplate
+    methods: [POST]
+    requirements:
+        id: \d+
+    defaults:
+        _scope: backend
+
+draggo_api_element_fields:
+    path: /contao/draggo/api/element/{id}/fields
+    controller: Vtinnovations\Draggo\Controller\Api\ElementApiController::fields
+    methods: [GET]
+    requirements:
+        id: \d+
+    defaults:
+        _scope: backend
+
+draggo_api_element_fields_save:
+    path: /contao/draggo/api/element/{id}/fields
+    controller: Vtinnovations\Draggo\Controller\Api\ElementApiController::saveFields
+    methods: [POST]
+    requirements:
+        id: \d+
+    defaults:
+        _scope: backend
+
+draggo_api_element_layout:
+    path: /contao/draggo/api/element/{id}/layout
+    controller: Vtinnovations\Draggo\Controller\Api\ElementApiController::setLayout
+    methods: [POST]
+    requirements:
+        id: \d+
+    defaults:
+        _scope: backend
+
+draggo_api_element_preview:
+    path: /contao/draggo/api/element/{id}/preview
+    controller: Vtinnovations\Draggo\Controller\Api\ElementApiController::preview
+    methods: [GET]
+    requirements:
+        id: \d+
+    defaults:
+        _scope: backend
+
+draggo_api_files:
+    path: /contao/draggo/api/files
+    controller: Vtinnovations\Draggo\Controller\Api\FilesApiController::list
+    methods: [GET]
+    defaults:
+        _scope: backend
+
+draggo_api_files_upload:
+    path: /contao/draggo/api/files/upload
+    controller: Vtinnovations\Draggo\Controller\Api\FilesApiController::upload
+    methods: [POST]
+    defaults:
+        _scope: backend
+
+draggo_api_files_folder:
+    path: /contao/draggo/api/files/folder
+    controller: Vtinnovations\Draggo\Controller\Api\FilesApiController::folder
+    methods: [POST]
+    defaults:
+        _scope: backend
+
+draggo_api_palette:
+    path: /contao/draggo/api/palette
+    controller: Vtinnovations\Draggo\Controller\Api\PaletteApiController::list
+    methods: [GET]
+    defaults:
+        _scope: backend
+
+# ── Restore points (history) ────────────────────────────────────────
+draggo_api_history_list:
+    path: /contao/draggo/api/article/{id}/history
+    controller: Vtinnovations\Draggo\Controller\Api\HistoryApiController::listArticle
+    methods: [GET]
+    requirements:
+        id: \d+
+    defaults:
+        _scope: backend
+
+draggo_api_history_snapshot:
+    path: /contao/draggo/api/article/{id}/history/snapshot
+    controller: Vtinnovations\Draggo\Controller\Api\HistoryApiController::snapshotArticle
+    methods: [POST]
+    requirements:
+        id: \d+
+    defaults:
+        _scope: backend
+
+draggo_api_history_restore:
+    path: /contao/draggo/api/history/{id}/restore
+    controller: Vtinnovations\Draggo\Controller\Api\HistoryApiController::restore
+    methods: [POST]
+    requirements:
+        id: \d+
+    defaults:
+        _scope: backend
+
+# ── KI-Element-Generator (Phase 3) ──────────────────────────────────
+draggo_api_agent_status:
+    path: /contao/draggo/api/agent/status
+    controller: Vtinnovations\Draggo\Controller\Api\AgentApiController::status
+    methods: [GET]
+    defaults:
+        _scope: backend
+
+draggo_api_agent_frombrief:
+    path: /contao/draggo/api/page/{id}/from-brief
+    controller: Vtinnovations\Draggo\Controller\Api\AgentApiController::fromBrief
+    methods: [POST]
+    requirements:
+        id: \d+
+    defaults:
+        _scope: backend
+
+draggo_api_agent_fromcontent:
+    path: /contao/draggo/api/page/{id}/from-content
+    controller: Vtinnovations\Draggo\Controller\Api\AgentApiController::fromContent
+    methods: [POST]
+    requirements:
+        id: \d+
+    defaults:
+        _scope: backend
+
+draggo_api_agent_chat:
+    path: /contao/draggo/api/agent/chat
+    controller: Vtinnovations\Draggo\Controller\Api\AgentApiController::chat
+    methods: [POST]
+    defaults:
+        _scope: backend
+
+draggo_api_agent_commit:
+    path: /contao/draggo/api/agent/commit
+    controller: Vtinnovations\Draggo\Controller\Api\AgentApiController::commit
+    methods: [POST]
+    defaults:
+        _scope: backend
+
+draggo_api_agent_delete:
+    path: /contao/draggo/api/agent/type/{type}
+    controller: Vtinnovations\Draggo\Controller\Api\AgentApiController::deleteType
+    methods: [DELETE]
+    requirements:
+        type: '[a-z0-9_]+'
+    defaults:
+        _scope: backend
+
+draggo_api_tokens:
+    path: /contao/draggo/api/tokens
+    controller: Vtinnovations\Draggo\Controller\Api\TokenApiController::list
+    methods: [GET]
+    defaults:
+        _scope: backend
+
+draggo_api_tokens_save:
+    path: /contao/draggo/api/tokens
+    controller: Vtinnovations\Draggo\Controller\Api\TokenApiController::save
+    methods: [POST]
+    defaults:
+        _scope: backend
+
+draggo_api_tokens_delete:
+    path: /contao/draggo/api/tokens/{id}
+    controller: Vtinnovations\Draggo\Controller\Api\TokenApiController::delete
+    methods: [DELETE]
+    requirements:
+        id: \d+
+    defaults:
+        _scope: backend
+
+draggo_api_defaults:
+    path: /contao/draggo/api/defaults
+    controller: Vtinnovations\Draggo\Controller\Api\TokenApiController::getDefaults
+    methods: [GET]
+    defaults:
+        _scope: backend
+
+draggo_api_defaults_save:
+    path: /contao/draggo/api/defaults
+    controller: Vtinnovations\Draggo\Controller\Api\TokenApiController::saveDefaults
+    methods: [POST]
+    defaults:
+        _scope: backend
+
+# ── Grid structures + containers (Phase 2) ──────────────────────────
+draggo_api_structure:
+    path: /contao/draggo/api/article/{id}/structure
+    controller: Vtinnovations\Draggo\Controller\Api\ElementApiController::structure
+    methods: [POST]
+    requirements:
+        id: \d+
+    defaults:
+        _scope: backend
+
+draggo_api_create_article:
+    path: /contao/draggo/api/page/{id}/article
+    controller: Vtinnovations\Draggo\Controller\Api\ElementApiController::createArticle
+    methods: [POST]
+    requirements:
+        id: \d+
+    defaults:
+        _scope: backend
+
+draggo_api_reorder_articles:
+    path: /contao/draggo/api/page/{id}/articles/reorder
+    controller: Vtinnovations\Draggo\Controller\Api\ElementApiController::reorderArticles
+    methods: [POST]
+    requirements:
+        id: \d+
+    defaults:
+        _scope: backend
+
+draggo_api_delete_article:
+    path: /contao/draggo/api/article/{id}
+    controller: Vtinnovations\Draggo\Controller\Api\ElementApiController::deleteArticle
+    methods: [DELETE]
+    requirements:
+        id: \d+
+    defaults:
+        _scope: backend
+
+draggo_api_duplicate_article:
+    path: /contao/draggo/api/article/{id}/duplicate
+    controller: Vtinnovations\Draggo\Controller\Api\ElementApiController::duplicateArticle
+    methods: [POST]
+    requirements:
+        id: \d+
+    defaults:
+        _scope: backend
+
+draggo_api_paste_article:
+    path: /contao/draggo/api/page/{id}/paste-container
+    controller: Vtinnovations\Draggo\Controller\Api\ElementApiController::pasteArticle
+    methods: [POST]
+    requirements:
+        id: \d+
+    defaults:
+        _scope: backend
+
+draggo_api_container_layout:
+    path: /contao/draggo/api/article/{id}/layout
+    controller: Vtinnovations\Draggo\Controller\Api\ElementApiController::setContainerLayout
+    methods: [POST]
+    requirements:
+        id: \d+
+    defaults:
+        _scope: backend
+
+# ── Global units (Phase 2) ──────────────────────────────────────────
+draggo_editor_unit:
+    path: /contao/draggo/edit-unit/{unit}
+    controller: Vtinnovations\Draggo\Controller\EditorController::editUnit
+    requirements:
+        unit: \d+
+    defaults:
+        _scope: backend
+
+draggo_api_unit_elements:
+    path: /contao/draggo/api/unit/{id}/elements
+    controller: Vtinnovations\Draggo\Controller\Api\ElementApiController::listUnit
+    methods: [GET]
+    requirements:
+        id: \d+
+    defaults:
+        _scope: backend
+
+draggo_api_unit_element:
+    path: /contao/draggo/api/unit/{id}/element
+    controller: Vtinnovations\Draggo\Controller\Api\ElementApiController::createInUnit
+    methods: [POST]
+    requirements:
+        id: \d+
+    defaults:
+        _scope: backend
+
+draggo_api_unit_reorder:
+    path: /contao/draggo/api/unit/{id}/reorder
+    controller: Vtinnovations\Draggo\Controller\Api\ElementApiController::reorderUnit
+    methods: [POST]
+    requirements:
+        id: \d+
+    defaults:
+        _scope: backend
+
+draggo_api_unit_structure:
+    path: /contao/draggo/api/unit/{id}/structure
+    controller: Vtinnovations\Draggo\Controller\Api\ElementApiController::structureUnit
+    methods: [POST]
+    requirements:
+        id: \d+
+    defaults:
+        _scope: backend
+
+draggo_api_unit_layout:
+    path: /contao/draggo/api/unit/{id}/layout
+    controller: Vtinnovations\Draggo\Controller\Api\ElementApiController::setUnitLayout
+    methods: [POST]
+    requirements:
+        id: \d+
+    defaults:
+        _scope: backend
+
+draggo_api_docs:
+    path: /contao/draggo/api/docs
+    controller: Vtinnovations\Draggo\Controller\Api\DocsController::list
+    methods: [GET]
+    defaults:
+        _scope: backend
+
+draggo_api_docs_chat:
+    path: /contao/draggo/api/docs/chat
+    controller: Vtinnovations\Draggo\Controller\Api\DocsController::ask
+    methods: [POST]
+    defaults:
+        _scope: backend
+
+draggo_api_forms:
+    path: /contao/draggo/api/forms
+    controller: Vtinnovations\Draggo\Controller\Api\FormApiController::list
+    methods: [GET]
+    defaults:
+        _scope: backend
+draggo_api_form_create:
+    path: /contao/draggo/api/forms
+    controller: Vtinnovations\Draggo\Controller\Api\FormApiController::create
+    methods: [POST]
+    defaults:
+        _scope: backend
+draggo_api_form_show:
+    path: /contao/draggo/api/form/{id}
+    controller: Vtinnovations\Draggo\Controller\Api\FormApiController::show
+    methods: [GET]
+    requirements: { id: \d+ }
+    defaults:
+        _scope: backend
+draggo_api_form_meta:
+    path: /contao/draggo/api/form/{id}/meta
+    controller: Vtinnovations\Draggo\Controller\Api\FormApiController::meta
+    methods: [POST]
+    requirements: { id: \d+ }
+    defaults:
+        _scope: backend
+draggo_api_form_field_add:
+    path: /contao/draggo/api/form/{id}/field
+    controller: Vtinnovations\Draggo\Controller\Api\FormApiController::addField
+    methods: [POST]
+    requirements: { id: \d+ }
+    defaults:
+        _scope: backend
+draggo_api_form_reorder:
+    path: /contao/draggo/api/form/{id}/reorder
+    controller: Vtinnovations\Draggo\Controller\Api\FormApiController::reorder
+    methods: [POST]
+    requirements: { id: \d+ }
+    defaults:
+        _scope: backend
+draggo_api_form_field_update:
+    path: /contao/draggo/api/form-field/{id}
+    controller: Vtinnovations\Draggo\Controller\Api\FormApiController::updateField
+    methods: [POST]
+    requirements: { id: \d+ }
+    defaults:
+        _scope: backend
+draggo_api_form_field_delete:
+    path: /contao/draggo/api/form-field/{id}
+    controller: Vtinnovations\Draggo\Controller\Api\FormApiController::deleteField
+    methods: [DELETE]
+    requirements: { id: \d+ }
+    defaults:
+        _scope: backend
+draggo_api_form_field_duplicate:
+    path: /contao/draggo/api/form-field/{id}/duplicate
+    controller: Vtinnovations\Draggo\Controller\Api\FormApiController::duplicateField
+    methods: [POST]
+    requirements: { id: \d+ }
+    defaults:
+        _scope: backend

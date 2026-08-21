@@ -1,0 +1,199 @@
+services:
+    _defaults:
+        autowire: true
+        autoconfigure: true
+        public: false
+
+    Vtinnovations\Draggo\:
+        resource: '../src/'
+        exclude:
+            - '../src/ContaoManager/'
+            - '../src/DependencyInjection/'
+            - '../src/Draggo.php'
+            - '../src/Editor/ContentElementDto.php'   # value object
+            - '../src/Grid/GridDefinition.php'        # value object (scalar ctor)
+            - '../src/Block/BlockSpec.php'            # value object (scalar ctor)
+            - '../src/Ai/AiResult.php'                # value object (scalar ctor)
+            - '../src/Exception/'                       # exceptions, not services
+
+    # Controllers need the controller tag + public visibility.
+    Vtinnovations\Draggo\Controller\:
+        resource: '../src/Controller/'
+        public: true
+        tags: ['controller.service_arguments']
+
+    Vtinnovations\Draggo\Controller\Api\FilesApiController:
+        arguments:
+            $projectDir: '%kernel.project_dir%'
+        public: true
+        tags: ['controller.service_arguments']
+
+    # EditorController needs the CSRF token name (kernel param, not autowirable).
+    Vtinnovations\Draggo\Controller\EditorController:
+        arguments:
+            $csrfTokenName: '%contao.csrf_token_name%'
+            $connection: '@database_connection'
+            $projectDir: '%kernel.project_dir%'
+        public: true
+        tags: ['controller.service_arguments']
+
+    # Per-element CSS + FE asset linking (needs project dir to detect optional
+    # Font Awesome assets).
+    Vtinnovations\Draggo\EventListener\ElementStyleListener:
+        arguments:
+            $projectDir: '%kernel.project_dir%'
+            $bootstrapMode: '%draggo.bootstrap.mode%'
+
+    # ── Editor core (Phase 1) ───────────────────────────────────────
+    Vtinnovations\Draggo\Editor\ContentSynchronizer:
+        arguments:
+            $connection: '@database_connection'
+
+    # Phase B: page CSS generation + hashed file cache.
+    Vtinnovations\Draggo\Css\CssGenerator:
+        arguments:
+            $connection: '@database_connection'
+            $projectDir: '%kernel.project_dir%'
+
+    Vtinnovations\Draggo\Editor\ElementRegistry: ~
+
+    # ── Phase E: design tokens / variables ──────────────────────────
+    Vtinnovations\Draggo\Token\TokenStore:
+        arguments:
+            $connection: '@database_connection'
+
+    Vtinnovations\Draggo\Token\DefaultsStore:
+        arguments:
+            $connection: '@database_connection'
+
+    Vtinnovations\Draggo\EventListener\GoogleFontsListener:
+        arguments:
+            $connection: '@database_connection'
+
+    # Page-tree navigation element (header/footer menus).
+    Vtinnovations\Draggo\Nav\NavRenderer:
+        arguments:
+            $connection: '@database_connection'
+
+    # Loop-grid query layer (Tier 3).
+    Vtinnovations\Draggo\Loop\LoopQuery:
+        arguments:
+            $connection: '@database_connection'
+
+    # ── Security (Phase 1) ──────────────────────────────────────────
+    # RequestGuard ties together CSRF + backend auth + record ownership.
+    Vtinnovations\Draggo\Security\RequestGuard:
+        arguments:
+            $csrfTokenManager: '@contao.csrf.token_manager'
+            $csrfTokenName: '%contao.csrf_token_name%'
+            $security: '@security.helper'
+            $connection: '@database_connection'
+
+    Vtinnovations\Draggo\Settings\HostInventory:
+        arguments:
+            $connection: '@database_connection'
+
+    Vtinnovations\Draggo\Security\InputSanitizer:
+        arguments:
+            $elementRegistry: '@Vtinnovations\Draggo\Editor\ElementRegistry'
+
+    # ── Discoverability (Phase 1.1) ─────────────────────────────────
+    # Frontend "B" launch button for logged-in backend users (generatePage
+    # hook) + the "Edit with Draggo" row operation in the page tree.
+    Vtinnovations\Draggo\EventListener\FrontendToolbarListener:
+        arguments:
+            $tokenChecker: '@contao.security.token_checker'
+            $urlGenerator: '@router'
+
+    Vtinnovations\Draggo\EventListener\PageOperationListener:
+        arguments:
+            $urlGenerator: '@router'
+
+    # ── Phase 3: AI element generator ───────────────────────────────
+    Vtinnovations\Draggo\Block\BlockTypeStore:
+        arguments:
+            $connection: '@database_connection'
+
+    Vtinnovations\Draggo\Settings\SettingsStore:
+        arguments:
+            $connection: '@database_connection'
+
+    Vtinnovations\Draggo\History\HistoryStore:
+        arguments:
+            $connection: '@database_connection'
+
+    Vtinnovations\Draggo\EventListener\SettingsSingletonListener:
+        arguments:
+            $connection: '@database_connection'
+            $router:     '@router'
+
+    # Effective AI settings: BE settings record overrides the bundle config.
+    Vtinnovations\Draggo\Settings\AiSettings:
+        arguments:
+            $cfgApiKey:       '%draggo.ai.api_key%'
+            $cfgModel:        '%draggo.ai.model%'
+            $cfgMaxTokens:    '%draggo.ai.max_tokens%'
+            $cfgMaxRounds:    '%draggo.ai.max_rounds%'
+            $cfgTelemetry:    '%draggo.ai.telemetry%'
+            $cfgTelemetryUrl: '%draggo.ai.telemetry_url%'
+
+    # Provider-agnostic alias → swap here to use OpenAI/Gemini later.
+    Vtinnovations\Draggo\Ai\AiClientInterface: '@Vtinnovations\Draggo\Ai\Provider\ClaudeClient'
+
+    # Landing-page image sourcing (Unsplash/Pexels/OpenAI). Downloader needs the
+    # project dir to write into files/draggo/ai/ (scalar, not autowirable).
+    Vtinnovations\Draggo\Image\MediaDownloader:
+        arguments:
+            $projectDir: '%kernel.project_dir%'
+
+    # ── Phase 2: Bootstrap + grid ───────────────────────────────────
+    # GridStack, grid controllers, UnitContentRenderer, unit callbacks all
+    # autowire from the resource blocks. Only the asset listener needs the
+    # config params wired explicitly (kernel params aren't autowirable).
+    Vtinnovations\Draggo\EventListener\BootstrapAssetsListener:
+        arguments:
+            $mode:   '%draggo.bootstrap.mode%'
+            $cssUrl: '%draggo.bootstrap.css_url%'
+            $jsUrl:  '%draggo.bootstrap.js_url%'
+
+    # ── Product activation (v-t.one registry) ───────────────────────
+    # Responsibilities are deliberately spread across the layers that already
+    # exist in this bundle rather than collected behind one service group, so
+    # removing any single definition below breaks the bundle instead of
+    # unlocking it. Every consumer takes these as REQUIRED dependencies.
+    Vtinnovations\Draggo\Settings\ActivationStore:
+        arguments:
+            $projectDir: '%kernel.project_dir%'
+
+    # Pinned PUBLIC verification keys, published as fragments by the extension.
+    Vtinnovations\Draggo\Security\TrustAnchors:
+        arguments:
+            $anchors: '%draggo.registry.anchors%'
+
+    Vtinnovations\Draggo\Agent\RegistryClient:
+        arguments:
+            $client: '@http_client'
+
+    Vtinnovations\Draggo\Agent\UsageSignal:
+        arguments:
+            $client: '@http_client'
+
+    Vtinnovations\Draggo\Migration\RetireLegacyActivationMigration:
+        arguments:
+            $projectDir: '%kernel.project_dir%'
+
+    # Renders the "Draggo Licence management" section in Contao → Settings.
+    # Public because Contao resolves DCA callbacks through the container.
+    Vtinnovations\Draggo\Dca\EditionCallbacks:
+        public: true
+        arguments:
+            $security: '@security.helper'
+            $router: '@router'
+
+    Vtinnovations\Draggo\Controller\Api\ActivationApiController:
+        public: true
+        tags: ['controller.service_arguments']
+        arguments:
+            $csrfTokenName: '%contao.csrf_token_name%'
+            $security: '@security.helper'
+            $router: '@router'

@@ -1,0 +1,203 @@
+/*
+ * Draggo
+ *
+ * Package: vtinnovations/draggo
+ * Copyright: V&T Innovations Team
+ * Licence: LGPL-3.0-or-later
+ * Website: https://v-t.one
+ */
+
+/* Draggo scrollytelling base styles. Effect markup is driven by draggo-scroll.js;
+ * each block below also defines a sane NO-JS / reduced-motion fallback so content
+ * is always readable. All selectors are element-scoped (.draggo-ss / -hp / -sp /
+ * -th / -px / -zm / -tl) so nothing leaks into the rest of the page. */
+
+/* ── Stack-Reveal (sticky overlapping cards) ─────────────────────────── */
+.draggo-ss { position: relative; }
+.draggo-ss-card {
+  position: sticky;
+  top: var(--ss-top, 8vh);
+  min-height: var(--ss-h, 78vh);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: var(--ss-gap, 2.5rem);
+  border-radius: var(--ss-radius, 20px);
+  overflow: hidden;
+  background: var(--ss-bg, #11131c);
+  color: var(--ss-fg, #f5f6fb);
+  box-shadow: 0 30px 80px -30px rgba(0, 0, 0, .55);
+  transform-origin: center top;
+  will-change: transform;
+  transition: filter .15s linear;
+}
+.draggo-ss-card:last-child { margin-bottom: 0; }
+.draggo-ss-inner { max-width: 760px; padding: clamp(1.5rem, 5vw, 4rem); text-align: center; }
+.draggo-ss-title { font-size: clamp(1.6rem, 4.5vw, 3rem); line-height: 1.1; margin: 0 0 1rem; font-weight: 700; }
+.draggo-ss-text { font-size: clamp(1rem, 1.6vw, 1.25rem); line-height: 1.6; opacity: .9; margin: 0; }
+.draggo-ss-num { font-size: .8rem; letter-spacing: .2em; text-transform: uppercase; opacity: .5; margin-bottom: .75rem; }
+
+/* ── Horizontal-Pin (sticky section, sideways track) ─────────────────── */
+.draggo-hp { position: relative; height: var(--hp-track, 320vh); }
+.draggo-hp-stage { position: sticky; top: 0; height: 100vh; overflow: hidden; display: flex; align-items: center; }
+.draggo-hp-track { display: flex; gap: var(--hp-gap, 3vw); padding: 0 6vw; will-change: transform; flex-shrink: 0; width: max-content; }
+.draggo-hp-panel {
+  flex: 0 0 var(--hp-w, 70vw);
+  min-height: 60vh;
+  display: flex; flex-direction: column; justify-content: center;
+  padding: clamp(1.5rem, 4vw, 3.5rem);
+  border-radius: 20px;
+  background: var(--hp-bg, #14161f);
+  color: var(--hp-fg, #f5f6fb);
+  opacity: .25;
+  transition: opacity .25s linear;
+}
+.draggo-hp-panel h3 { font-size: clamp(1.4rem, 3.5vw, 2.4rem); margin: 0 0 .75rem; }
+.draggo-hp-panel p { font-size: clamp(1rem, 1.5vw, 1.2rem); line-height: 1.6; opacity: .9; margin: 0; }
+/* No-JS / reduced-motion: collapse the tall track to a normal swipeable strip. */
+.draggo-no-js .draggo-hp,
+.draggo-hp.is-in.draggo-fallback { height: auto; }
+@media (prefers-reduced-motion: reduce) {
+  .draggo-hp { height: auto; }
+  .draggo-hp-stage { position: static; height: auto; overflow-x: auto; }
+  .draggo-hp-panel { opacity: 1; }
+}
+
+/* ── Sticky-Split Story (pinned text, swapping visual) ───────────────── */
+.draggo-sp { position: relative; }
+.draggo-sp-grid { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(1.5rem, 4vw, 4rem); }
+.draggo-sp-visuals { position: sticky; top: 0; height: 100vh; display: flex; align-items: center; }
+.draggo-sp-visual { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity .4s ease; border-radius: 18px; overflow: hidden; }
+.draggo-sp-visual.is-active { opacity: 1; }
+.draggo-sp-visual img { width: 100%; height: 100%; object-fit: cover; }
+.draggo-sp-steps { display: flex; flex-direction: column; }
+.draggo-sp-step { min-height: 90vh; display: flex; flex-direction: column; justify-content: center; opacity: .35; transition: opacity .3s ease; }
+.draggo-sp-step.is-active { opacity: 1; }
+.draggo-sp-step h3 { font-size: clamp(1.4rem, 3vw, 2.2rem); margin: 0 0 1rem; }
+.draggo-sp-step p { font-size: clamp(1rem, 1.5vw, 1.2rem); line-height: 1.7; margin: 0; }
+@media (max-width: 767px) {
+  .draggo-sp-grid { grid-template-columns: 1fr; }
+  .draggo-sp-visuals { position: relative; height: 56vh; }
+  .draggo-sp-step { min-height: auto; opacity: 1; margin: 1.5rem 0; }
+}
+
+/* ── Text-Highlight (word-by-word colour fill) ───────────────────────── */
+.draggo-th { font-size: clamp(1.6rem, 5vw, 3.4rem); line-height: 1.35; font-weight: 600; max-width: 1100px; margin: 0 auto; padding: 12vh 1rem; }
+.draggo-th-w { color: var(--th-dim, rgba(120, 128, 150, .35)); transition: color .25s ease; }
+.draggo-th-w.is-on { color: var(--th-lit, inherit); }
+
+/* ── Parallax-Layers ─────────────────────────────────────────────────── */
+.draggo-px { position: relative; overflow: hidden; min-height: var(--px-h, 70vh); display: flex; align-items: center; justify-content: center; }
+.draggo-px-layer { position: absolute; inset: -10% 0; background-size: cover; background-position: center; will-change: transform; pointer-events: none; }
+.draggo-px-content { position: relative; z-index: 2; text-align: center; padding: 2rem; }
+
+/* ── Scroll-Zoom (framed media scales to full) ───────────────────────── */
+.draggo-zm { position: relative; }
+.draggo-zm-frame { transform: scale(var(--zm-from, .6)); transform-origin: center; overflow: hidden; border-radius: 24px; will-change: transform; }
+.draggo-zm-frame img, .draggo-zm-frame video { width: 100%; display: block; }
+@media (prefers-reduced-motion: reduce) { .draggo-zm-frame { transform: none; border-radius: 12px; } }
+
+/* ── Pinned-Timeline (filling line + activating steps) ───────────────── */
+.draggo-tl { position: relative; padding-left: 2.5rem; }
+.draggo-tl-line { position: absolute; left: .85rem; top: 0; bottom: 0; width: 2px; background: var(--tl-track, rgba(130,130,150,.25)); }
+.draggo-tl-fill { position: absolute; left: 0; top: 0; width: 100%; height: 0; background: var(--tl-accent, #4d49ee); }
+.draggo-tl-step { position: relative; min-height: 38vh; opacity: .4; transition: opacity .3s ease; }
+.draggo-tl-step::before { content: ''; position: absolute; left: -2.2rem; top: .35rem; width: 14px; height: 14px; border-radius: 50%; background: var(--tl-track, #555); transition: background .3s, transform .3s; }
+.draggo-tl-step.is-active { opacity: 1; }
+.draggo-tl-step.is-active::before { background: var(--tl-accent, #4d49ee); transform: scale(1.25); }
+.draggo-tl-step h3 { margin: 0 0 .5rem; font-size: clamp(1.2rem, 2.4vw, 1.7rem); }
+.draggo-tl-step p { margin: 0; line-height: 1.7; }
+
+/* ── Generic reveal (fade/slide in once) ─────────────────────────────── */
+[data-draggo-scroll="reveal"] { opacity: 0; transform: translateY(28px); transition: opacity .8s ease, transform .8s cubic-bezier(.16,1,.3,1); }
+[data-draggo-scroll="reveal"].is-in { opacity: 1; transform: none; }
+
+/* ── Before/After (interactive compare slider) ───────────────────────── */
+.draggo-ba { position: relative; overflow: hidden; border-radius: 14px; user-select: none; line-height: 0; --ba-pos: 50%; }
+.draggo-ba-img { position: absolute; inset: 0; }
+.draggo-ba-img img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.draggo-ba-after { position: relative; }          /* defines box height */
+.draggo-ba-before { clip-path: inset(0 calc(100% - var(--ba-pos)) 0 0); }
+.draggo-ba-lbl { position: absolute; bottom: 12px; padding: 4px 12px; border-radius: 999px; font: 600 12px/1 system-ui, sans-serif; background: rgba(0,0,0,.55); color: #fff; }
+.draggo-ba-lbl-a { right: 12px; }
+.draggo-ba-lbl-b { left: 12px; }
+.draggo-ba-divider { position: absolute; top: 0; bottom: 0; left: var(--ba-pos); width: 2px; background: #fff; box-shadow: 0 0 0 1px rgba(0,0,0,.2); transform: translateX(-1px); pointer-events: none; }
+.draggo-ba-handle { position: absolute; top: 50%; left: 50%; width: 40px; height: 40px; transform: translate(-50%,-50%); border-radius: 50%; background: #fff; box-shadow: 0 2px 10px rgba(0,0,0,.35); }
+.draggo-ba-handle::before, .draggo-ba-handle::after { content: ''; position: absolute; top: 50%; width: 0; height: 0; border-block: 5px solid transparent; }
+.draggo-ba-handle::before { left: 9px; border-right: 7px solid #333; transform: translateY(-50%); }
+.draggo-ba-handle::after { right: 9px; border-left: 7px solid #333; transform: translateY(-50%); }
+.draggo-ba-range { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: ew-resize; }
+
+/* ── WAVE 2 ───────────────────────────────────────────────────────────── */
+
+/* Reveal-Grid: staggered cards fade + rise in (one-shot via .is-in). */
+.draggo-rg { display: grid; grid-template-columns: repeat(var(--rg-cols, 3), 1fr); gap: var(--rg-gap, 1.25rem); }
+.draggo-rg-item { opacity: 0; transform: translateY(30px); transition: opacity .7s ease, transform .7s cubic-bezier(.16,1,.3,1); transition-delay: calc(var(--i, 0) * .09s); background: var(--rg-bg, #14161f); color: var(--rg-fg, #f5f6fb); border-radius: 14px; padding: clamp(1.1rem, 2.5vw, 1.8rem); }
+.draggo-rg.is-in .draggo-rg-item { opacity: 1; transform: none; }
+.draggo-rg-item h3 { margin: 0 0 .5rem; font-size: clamp(1.1rem, 2vw, 1.5rem); }
+.draggo-rg-item p { margin: 0; line-height: 1.6; opacity: .9; }
+@media (max-width: 767px) { .draggo-rg { grid-template-columns: 1fr; } }
+@media (prefers-reduced-motion: reduce) { .draggo-rg-item { opacity: 1; transform: none; } }
+
+/* SVG-Path-Draw: a stroke that draws itself with scroll. */
+.draggo-sd { width: 100%; padding: 8vh 0; }
+.draggo-sd svg { width: 100%; height: auto; display: block; overflow: visible; }
+.draggo-sd-path { fill: none; stroke: var(--sd-color, #4d49ee); stroke-width: var(--sd-w, 4); stroke-linecap: round; stroke-linejoin: round; }
+@media (prefers-reduced-motion: reduce) { .draggo-sd-path { stroke-dashoffset: 0 !important; } }
+
+/* Scroll-Progress: fixed reading bar (top by default). */
+.draggo-pr { position: fixed; left: 0; right: 0; height: var(--pr-h, 4px); z-index: 9999; background: var(--pr-track, transparent); pointer-events: none; }
+.draggo-pr--top { top: 0; }
+.draggo-pr--bottom { bottom: 0; }
+.draggo-pr-fill { height: 100%; width: 0; background: var(--pr-color, #4d49ee); transition: width .1s linear; }
+
+/* Curtain-Cover: full-bleed sticky panels, next covers previous. */
+.draggo-ct { position: relative; }
+.draggo-ct-panel { position: sticky; top: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center; overflow: hidden; background: var(--ct-bg, #11131c) center/cover no-repeat; color: var(--ct-fg, #fff); transform-origin: center top; will-change: transform; }
+.draggo-ct-panel::after { content: ''; position: absolute; inset: 0; background: rgba(0,0,0,.35); z-index: 0; }
+.draggo-ct-inner { position: relative; z-index: 1; max-width: 820px; padding: 2rem; text-align: center; }
+.draggo-ct-inner h2 { font-size: clamp(2rem, 6vw, 4rem); margin: 0 0 1rem; line-height: 1.05; }
+.draggo-ct-inner p { font-size: clamp(1rem, 1.8vw, 1.35rem); line-height: 1.6; margin: 0; opacity: .92; }
+
+/* Text-Mask: image visible through big text. */
+.draggo-tm { padding: 10vh 1rem; text-align: center; overflow: hidden; }
+.draggo-tm-text { font-size: clamp(3rem, 16vw, 12rem); font-weight: 900; line-height: .95; margin: 0; letter-spacing: -.02em;
+  background-image: var(--tm-img); background-size: cover; background-position: center; background-repeat: no-repeat;
+  -webkit-background-clip: text; background-clip: text; color: transparent; -webkit-text-fill-color: transparent; }
+
+/* Tilt-3D Cards: reveal in + tilt toward pointer (JS sets transform). */
+.draggo-tilt { display: grid; grid-template-columns: repeat(var(--tilt-cols, 3), 1fr); gap: var(--tilt-gap, 1.25rem); perspective: 1000px; }
+.draggo-tilt-card { opacity: 0; transform: translateY(26px); transition: opacity .6s ease, transform .25s ease; transform-style: preserve-3d; will-change: transform; background: var(--tilt-bg, #14161f); color: var(--tilt-fg, #f5f6fb); border-radius: 16px; padding: clamp(1.2rem, 3vw, 2rem); box-shadow: 0 20px 50px -25px rgba(0,0,0,.6); }
+.draggo-tilt.is-in .draggo-tilt-card { opacity: 1; transform: none; }
+.draggo-tilt-card h3 { margin: 0 0 .5rem; font-size: clamp(1.1rem, 2vw, 1.5rem); }
+.draggo-tilt-card p { margin: 0; line-height: 1.6; opacity: .9; }
+/* Per-card background photo: cover image + dark overlay for text readability.
+   --ti-ov (0–1) overlay strength comes from the element's "Tilt-Cards" style
+   group (default .45); --ti-pos optional background-position. */
+.draggo-tilt-card--img { position: relative; overflow: hidden; background-size: cover; background-position: var(--ti-pos, center); color: #fff; min-height: 220px; display: flex; align-items: flex-end; }
+.draggo-tilt-card--img::before { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,calc(var(--ti-ov, .45) * .4)) 0%, rgba(0,0,0,var(--ti-ov, .45)) 100%); z-index: 0; }
+.draggo-tilt-card-body { position: relative; z-index: 1; width: 100%; }
+.draggo-tilt-card--img h3, .draggo-tilt-card--img p { color: #fff; }
+.draggo-tilt-card--img p { opacity: .95; }
+@media (max-width: 767px) { .draggo-tilt { grid-template-columns: 1fr; } }
+@media (prefers-reduced-motion: reduce) { .draggo-tilt-card { opacity: 1; transform: none; } }
+
+/* ── Pin fix: position:sticky needs no clipping ancestor ──────────────────
+   Contao's .mod_article (and many theme/layout wrappers) set overflow:hidden,
+   which silently disables position:sticky for ALL descendants → pin-based
+   scroll elements never pin and the page just scrolls past. Open the clipping
+   ancestor ONLY when it actually contains a pinned scroll element (:has), so
+   nothing else on the page is affected. Covers the Contao article + Draggo grid
+   wrappers in case a pin element sits inside a grid column. */
+.mod_article:has([data-draggo-scroll="hpin"]),
+.mod_article:has([data-draggo-scroll="curtain"]),
+.mod_article:has([data-draggo-scroll="stack"]),
+.mod_article:has([data-draggo-scroll="split"]),
+[class*="draggo-rr"]:has([data-draggo-scroll="hpin"]),
+[class*="draggo-rr"]:has([data-draggo-scroll="curtain"]),
+[class*="draggo-rr"]:has([data-draggo-scroll="stack"]),
+[class*="draggo-rr"]:has([data-draggo-scroll="split"]),
+.draggo-col:has([data-draggo-scroll="hpin"]),
+.draggo-col:has([data-draggo-scroll="curtain"]),
+.draggo-col:has([data-draggo-scroll="stack"]),
+.draggo-col:has([data-draggo-scroll="split"]) { overflow: visible !important; }

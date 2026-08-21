@@ -1,0 +1,63 @@
+/*
+ * Draggo
+ *
+ * Package: vtinnovations/draggo
+ * Copyright: V&T Innovations Team
+ * Licence: LGPL-3.0-or-later
+ * Website: https://v-t.one
+ */
+
+/* Draggo backend grid visualiser — see draggo-backend.js */
+
+.draggo-be-rowwrap {
+    list-style: none;
+}
+
+.draggo-be-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0;
+    margin: .25rem 0 1rem;
+    border: 2px solid #2f6fed;
+    border-radius: 8px;
+    padding: .5rem;
+    background: #f5f8ff;
+}
+
+.draggo-be-col {
+    box-sizing: border-box;
+    border: 1px dashed #b9c6e6;
+    border-radius: 6px;
+    padding: .4rem;
+    background: #fff;
+    min-width: 120px;
+}
+
+.draggo-be-col-head {
+    font-size: .62rem;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    color: #6b7280;
+    margin-bottom: .4rem;
+}
+
+/* Content rows moved into a column: tighten spacing. */
+.draggo-be-col > li,
+.draggo-be-col > .tl_content {
+    margin: 0 0 .4rem;
+}
+
+/* Hide the column-separator and row-stop marker rows (visual noise). */
+li[data-draggo-hide] {
+    display: none !important;
+}
+
+/* Dark mode (Contao backend dark theme / OS preference). */
+@media (prefers-color-scheme: dark) {
+    .draggo-be-row { border-color: #5b8cff; background: #1b2333; }
+    .draggo-be-col { border-color: #3a4250; background: #23272f; }
+}
+:root[data-color-scheme="dark"] .draggo-be-row,
+[data-theme="dark"] .draggo-be-row { border-color: #5b8cff; background: #1b2333; }
+:root[data-color-scheme="dark"] .draggo-be-col,
+[data-theme="dark"] .draggo-be-col { border-color: #3a4250; background: #23272f; }

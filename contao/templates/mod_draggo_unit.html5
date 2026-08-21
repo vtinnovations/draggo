@@ -1,0 +1,7 @@
+<?php
+/*
+ * Renders the content of one global Draggo unit. $this->content is the
+ * already-rendered HTML of the unit's content elements (incl. grid wrappers).
+ */
+?>
+<?= $this->content ?>

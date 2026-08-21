@@ -1,0 +1,482 @@
+/*
+ * Draggo
+ *
+ * Package: vtinnovations/draggo
+ * Copyright: V&T Innovations Team
+ * Licence: LGPL-3.0-or-later
+ * Website: https://v-t.one
+ */
+
+/**
+ * Draggo frontend base styles (loaded on every page + in the editor canvas).
+ * Currently: navigation element presets. Element-level styling (colour,
+ * typography, spacing) is layered on top via the per-element cache CSS.
+ */
+
+/* Background overlay layer (rows/columns): sits above bg, below content. The
+   inline style carries position/inset/z-index/background; this only ensures it
+   tracks rounded corners and never intercepts clicks. */
+.draggo-bg-overlay { border-radius: inherit; pointer-events: none; }
+
+/* Media background layer (video / slideshow): below the overlay, above the
+   solid background colour. Negative z-index inside the host's isolated
+   stacking context. */
+.draggo-bg-media { position: absolute; inset: 0; z-index: -2; overflow: hidden; pointer-events: none; border-radius: inherit; }
+.draggo-bg-video { width: 100%; height: 100%; object-fit: cover; display: block; }
+.draggo-bg-slider .draggo-bg-slide { position: absolute; inset: 0; background-size: cover; background-position: center; background-repeat: no-repeat; opacity: 0; transition: opacity 1s ease; }
+.draggo-bg-slider .draggo-bg-slide.is-on { opacity: 1; }
+/* "Slide" mode: a flex track of full-width panels that translates. */
+.draggo-bg-slider--slide { overflow: hidden; }
+.draggo-bg-track { display: flex; width: 100%; height: 100%; transition: transform .8s ease; }
+.draggo-bg-slider--slide .draggo-bg-slide { position: relative; inset: auto; flex: 0 0 100%; opacity: 1; }
+
+/* Atomic widgets — base look (overridable via the element Style tab). */
+/* Block-level + fit-content so the pill keeps its size yet centres via the
+   element alignment (--bld-ml/--bld-mr auto-margins). btnFull overrides width. */
+.draggo-btn { display: block; width: -moz-fit-content; width: fit-content; max-width: 100%; margin-left: var(--bld-ml, 0); margin-right: var(--bld-mr, auto); padding: .7rem 1.4rem; background: #0a66ff; color: #fff; border-radius: 6px; text-decoration: none; font-weight: 600; line-height: 1.2; transition: filter .15s; }
+/* Don't force white on hover — keep the element's own colour so a user-set
+   button text colour (or btnHoverColor) survives the hover. */
+.draggo-btn:hover { filter: brightness(1.08); }
+.draggo-divider { border: 0; border-top: 1px solid currentColor; }
+.draggo-spacer { width: 100%; }
+/* Icon-Box / Image-Box */
+.draggo-box { display: flex; gap: 1rem; }
+.draggo-box--top { flex-direction: column; align-items: flex-start; }
+.draggo-box--right { flex-direction: row-reverse; }
+.draggo-box-media img { display: block; max-width: 100%; height: auto; }
+.draggo-iconbox .draggo-box-media img { width: 56px; height: auto; }
+.draggo-box-title { margin: 0 0 .35rem; }
+.draggo-box-text { margin: 0; }
+
+/* Accordion */
+.draggo-acc-item { border: 1px solid rgba(0,0,0,.12); border-radius: 6px; margin-bottom: .4rem; overflow: hidden; }
+.draggo-acc-head { width: 100%; text-align: left; background: rgba(0,0,0,.03); border: 0; padding: .8rem 1rem; font: inherit; font-weight: 600; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
+.draggo-acc-ico { width: .7rem; height: .7rem; position: relative; flex: 0 0 auto; }
+.draggo-acc-ico::before, .draggo-acc-ico::after { content: ""; position: absolute; background: currentColor; transition: transform .2s; }
+.draggo-acc-ico::before { left: 0; top: 45%; width: 100%; height: 2px; }
+.draggo-acc-ico::after { left: 45%; top: 0; width: 2px; height: 100%; }
+.draggo-acc-item.is-open .draggo-acc-ico::after { transform: scaleY(0); }
+.draggo-acc-body { display: grid; grid-template-rows: 0fr; transition: grid-template-rows .25s; }
+.draggo-acc-item.is-open .draggo-acc-body { grid-template-rows: 1fr; }
+.draggo-acc-inner { overflow: hidden; }
+.draggo-acc-item.is-open .draggo-acc-inner { padding: .8rem 1rem; }
+
+/* Tabs (widget) */
+.draggo-tabw-nav { display: flex; flex-wrap: wrap; gap: .25rem; border-bottom: 2px solid rgba(0,0,0,.1); }
+.draggo-tabw-btn { background: none; border: 0; padding: .6rem 1rem; font: inherit; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -2px; }
+.draggo-tabw-btn.is-active { border-bottom-color: currentColor; font-weight: 600; }
+.draggo-tabw-panel { display: none; padding: 1rem 0; }
+.draggo-tabw-panel.is-active { display: block; }
+
+/* Image carousel */
+.draggo-car { position: relative; }
+.draggo-car-viewport { overflow: hidden; }
+.draggo-car-track { display: flex; transition: transform .4s ease; }
+.draggo-car-slide { flex: 0 0 100%; box-sizing: border-box; padding: 0 .25rem; }
+.draggo-car-slide img { display: block; width: 100%; height: auto; }
+.draggo-car-prev, .draggo-car-next { position: absolute; top: 50%; transform: translateY(-50%); border: 0; background: rgba(0,0,0,.5); color: #fff; width: 38px; height: 38px; border-radius: 50%; cursor: pointer; font-size: 1.4rem; line-height: 1; }
+.draggo-car-prev { left: .5rem; } .draggo-car-next { right: .5rem; }
+.draggo-car-dots { display: flex; justify-content: center; gap: .4rem; margin-top: .6rem; }
+.draggo-car-dots button { width: 10px; height: 10px; border-radius: 50%; border: 0; background: rgba(0,0,0,.25); cursor: pointer; padding: 0; }
+.draggo-car-dots button.is-on { background: rgba(0,0,0,.7); }
+
+/* Loop grid (cards) */
+.draggo-loop { display: grid; grid-template-columns: repeat(var(--cols, 3), 1fr); gap: 1rem; }
+@media (max-width: 767px) { .draggo-loop { grid-template-columns: 1fr; } }
+.draggo-loop-card { display: block; padding: 1.25rem; border: 1px solid rgba(0,0,0,.12); border-radius: 8px; text-decoration: none; color: inherit; transition: box-shadow .15s, transform .15s; }
+.draggo-loop-card:hover { box-shadow: 0 8px 24px rgba(0,0,0,.1); transform: translateY(-2px); color: inherit; }
+.draggo-loop-card { padding: 0; overflow: hidden; }
+.draggo-loop-img img { display: block; width: 100%; height: auto; }
+.draggo-loop-card > h3, .draggo-loop-card > p, .draggo-loop-card > .draggo-loop-more { margin-left: 1.25rem; margin-right: 1.25rem; }
+.draggo-loop-card > h3:first-child { margin-top: 1.25rem; }
+.draggo-loop-card > .draggo-loop-more { display: inline-block; margin-bottom: 1.25rem; }
+.draggo-loop-title { margin: 1.25rem 0 .4rem; }
+.draggo-loop-teaser { margin: 0 0 .5rem; opacity: .8; }
+.draggo-loop-more { font-weight: 600; }
+
+/* Images never overflow / explode at natural size (Elementor-like default). */
+.image_container img, figure.image_container img, .ce_image img { max-width: 100%; height: auto; }
+
+/* Navigation — shared */
+.draggo-nav { font: inherit; }
+.draggo-nav-list { list-style: none; margin: 0; padding: 0; }
+.draggo-nav a { text-decoration: none; color: inherit; display: block; padding: .5rem .75rem; }
+.draggo-nav-item { position: relative; }
+.draggo-nav-toggle { display: none; background: none; border: 0; font-size: 1.6rem; line-height: 1; cursor: pointer; color: inherit; padding: .25rem .5rem; }
+/* Close (×) button injected into an open drawer panel (top-right of the panel). */
+.draggo-nav-close { position: absolute; top: .4rem; right: .6rem; background: none; border: 0; font-size: 2rem; line-height: 1; cursor: pointer; color: inherit; padding: .1rem .4rem; z-index: 2; }
+/* Dim backdrop behind an open drawer (colour set via navOverlayColor; default transparent click-catcher). */
+.draggo-nav-backdrop { display: none; position: fixed; inset: 0; z-index: 999; background: transparent; }
+.draggo-nav.is-open .draggo-nav-backdrop { display: block; }
+
+/* Horizontal (default header bar) */
+.draggo-nav--horizontal > .draggo-nav-list { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem 1.5rem; }
+.draggo-nav--horizontal .draggo-nav-item .draggo-nav-list {
+    position: absolute; left: 0; top: 100%; min-width: 200px;
+    background: #fff; color: #1b1f24; box-shadow: 0 10px 30px rgba(0,0,0,.15);
+    display: none; flex-direction: column; padding: .35rem 0; z-index: 1000; border-radius: 6px;
+}
+.draggo-nav--horizontal .draggo-nav-item:hover > .draggo-nav-list { display: flex; }
+
+/* Vertical / side navigation */
+.draggo-nav--vertical > .draggo-nav-list { display: flex; flex-direction: column; gap: .15rem; }
+.draggo-nav--vertical .draggo-nav-list .draggo-nav-list { padding-left: 1rem; }
+.draggo-nav--vertical .draggo-nav-item > a { border-radius: 6px; }
+.draggo-nav--vertical .draggo-nav-item > a:hover { background: rgba(0,0,0,.06); }
+
+/* Hamburger: button always visible, panel toggles open */
+.draggo-nav--hamburger { position: relative; }
+.draggo-nav--hamburger .draggo-nav-toggle { display: inline-block; }
+.draggo-nav--hamburger > .draggo-nav-list {
+    display: none; flex-direction: column; gap: .15rem;
+    position: absolute; top: 100%; left: 0; right: 0; z-index: 1000;
+    background: #fff; color: #1b1f24; box-shadow: 0 10px 30px rgba(0,0,0,.15);
+    padding: .5rem; border-radius: 6px; min-width: 220px;
+}
+.draggo-nav--hamburger.is-open > .draggo-nav-list { display: flex; }
+.draggo-nav--hamburger .draggo-nav-list .draggo-nav-list { position: static; box-shadow: none; padding-left: .75rem; background: transparent; }
+
+/* Inline-SVG icons (Tier 1). Sized to font-size; colour = currentColor. */
+.draggo-svg { width: 1em; height: 1em; display: inline-block; vertical-align: middle; }
+.draggo-icon { display: flex; justify-content: var(--bld-justify, flex-start); line-height: 0; font-size: 48px; color: inherit; }
+.draggo-icon > a { display: inline-flex; color: inherit; }
+.draggo-btn-ico { display: inline-flex; vertical-align: middle; }
+.draggo-btn-ico .draggo-svg { width: 1em; height: 1em; }
+.draggo-btn--ico-before .draggo-btn-ico { margin-right: .5em; }
+.draggo-btn--ico-after .draggo-btn-ico { margin-left: .5em; }
+.draggo-btn--ico-after { } /* icon order handled in markup */
+.draggo-box-icon { display: inline-flex; line-height: 0; font-size: 56px; color: inherit; }
+.draggo-box-icon .draggo-svg { width: 1em; height: 1em; }
+/* Divider with centred text / alignment */
+.draggo-divider-wrap { display: flex; align-items: center; gap: .75rem; }
+.draggo-divider-wrap .draggo-divider-line { flex: 1; border-top: 1px solid currentColor; }
+.draggo-divider-text { white-space: nowrap; }
+
+/* Carousel fade mode (cross-fade instead of slide). */
+.draggo-car--fade .draggo-car-track { display: block; position: relative; }
+.draggo-car--fade .draggo-car-slide { position: absolute; inset: 0; opacity: 0; transition: opacity .5s ease; flex: none !important; max-width: 100% !important; }
+.draggo-car--fade .draggo-car-slide.is-shown { position: relative; opacity: 1; }
+
+/* ── Tier 2: Alert / Blockquote / Counter / Progress ── */
+.draggo-alert { display: flex; gap: .75rem; align-items: flex-start; padding: 1rem 1.25rem; border-radius: 8px; border: 1px solid; }
+.draggo-alert-icon { flex: 0 0 auto; font-size: 1.25em; line-height: 1.4; }
+.draggo-alert--info { background: #e7f1ff; border-color: #9ec5fe; color: #084298; }
+.draggo-alert--success { background: #d1e7dd; border-color: #a3cfbb; color: #0a3622; }
+.draggo-alert--warning { background: #fff3cd; border-color: #ffe69c; color: #664d03; }
+.draggo-alert--error { background: #f8d7da; border-color: #f1aeb5; color: #58151c; }
+.draggo-alert-body { flex: 1; }
+.draggo-alert-title { font-weight: 700; margin: 0 0 .25rem; }
+.draggo-alert-text { margin: 0; }
+.draggo-alert-close { background: none; border: 0; color: inherit; font-size: 1.4rem; line-height: 1; cursor: pointer; padding: 0 .2rem; opacity: .7; }
+.draggo-alert-close:hover { opacity: 1; }
+
+.draggo-quote { margin: 0; padding: .5rem 0 .5rem 1.25rem; border-left: 4px solid currentColor; }
+.draggo-quote-text { margin: 0; font-size: 1.25rem; font-style: italic; }
+.draggo-quote-author { margin: .6rem 0 0; font-size: .9rem; opacity: .75; }
+.draggo-quote-author::before { content: "— "; }
+
+.draggo-counter { display: flex; justify-content: var(--bld-justify, flex-start); align-items: baseline; gap: .05em; font-size: 2.75rem; font-weight: 700; line-height: 1.1; }
+
+.draggo-progress-label { display: flex; justify-content: space-between; margin-bottom: .35rem; font-size: .9rem; }
+.draggo-progress-track { background: rgba(0,0,0,.1); border-radius: 999px; overflow: hidden; height: 10px; }
+.draggo-progress-bar { width: 0; height: 100%; background: #0a66ff; border-radius: 999px; transition: width 1.2s ease; }
+
+/* ── Tier 2 (Batch 2): Icon-List / CTA / Social / Flip-Box ── */
+.draggo-ilist { list-style: none; margin: 0; padding: 0; }
+.draggo-ilist-item { display: flex; align-items: flex-start; gap: .6rem; margin: 0 0 .5rem; }
+.draggo-ilist-ico { display: inline-flex; line-height: 0; font-size: 1.2em; color: inherit; flex: 0 0 auto; margin-top: .1em; }
+.draggo-ilist-ico .draggo-svg { width: 1em; height: 1em; }
+
+.draggo-cta { padding: 2rem; border-radius: 10px; background: rgba(0,0,0,.04); text-align: center; }
+.draggo-cta-title { margin: 0 0 .5rem; }
+.draggo-cta-text { margin: 0 0 1.25rem; }
+
+.draggo-social { display: flex; justify-content: var(--bld-justify, flex-start); flex-wrap: wrap; gap: .6rem; }
+.draggo-social-link { display: inline-flex; align-items: center; justify-content: center; width: 2.6em; height: 2.6em; border-radius: 50%; background: rgba(0,0,0,.08); color: inherit; text-decoration: none !important; transition: background .15s, transform .15s; }
+.draggo-social-link:hover, .draggo-social-link:focus { background: rgba(0,0,0,.16); transform: translateY(-2px); text-decoration: none !important; }
+.draggo-social-link .draggo-svg { width: 1.2em; height: 1.2em; }
+/* Icon links never inherit the theme's link underline. */
+.draggo-icon a, .draggo-icon a:hover { text-decoration: none !important; }
+
+.draggo-flip { perspective: 1200px; }
+.draggo-flip-inner { position: relative; width: 100%; height: var(--flip-h, 300px); transition: transform .6s; transform-style: preserve-3d; }
+.draggo-flip:hover .draggo-flip-inner, .draggo-flip:focus-within .draggo-flip-inner { transform: rotateY(180deg); }
+.draggo-flip-face { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .5rem; padding: 1.5rem; border-radius: 10px; backface-visibility: hidden; -webkit-backface-visibility: hidden; text-align: center; }
+.draggo-flip-front { background: #0a66ff; color: #fff; }
+.draggo-flip-back { background: #1b2330; color: #fff; transform: rotateY(180deg); }
+/* Outline button on the flip back — inherits the back face's text colour so it
+   always matches the card (no forced blue). */
+.draggo-flip-btn { display: inline-block; margin-top: .9rem; padding: .55rem 1.2rem; border: 2px solid currentColor; border-radius: 6px; color: inherit; text-decoration: none; font-weight: 600; line-height: 1.2; background: transparent; cursor: pointer; transition: background-color .2s ease; }
+.draggo-flip-btn:hover { background: rgba(127, 127, 127, .25); }
+.draggo-flip-ico { display: inline-flex; line-height: 0; font-size: 2.5rem; }
+.draggo-flip-ico .draggo-svg { width: 1em; height: 1em; }
+.draggo-flip-title { margin: 0; }
+.draggo-flip-text { margin: 0; }
+
+/* ── Tier 4: Logo / Page-Title / Breadcrumb / Sitemap ── */
+.draggo-logo { display: flex; justify-content: var(--bld-justify, flex-start); line-height: 0; }
+.draggo-logo a { display: inline-flex; }
+.draggo-logo-img { display: block; max-width: 100%; height: auto; }
+.draggo-pagetitle { margin: 0; }
+
+.draggo-breadcrumb ol { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; }
+.draggo-breadcrumb a { text-decoration: none; color: inherit; opacity: .8; }
+.draggo-breadcrumb a:hover { opacity: 1; text-decoration: underline; }
+.draggo-bc-sep { opacity: .5; }
+.draggo-bc-active { font-weight: 600; }
+
+.draggo-sitemap ul { list-style: none; margin: 0; padding: 0; }
+.draggo-sitemap .draggo-sitemap-list .draggo-sitemap-list { padding-left: 1.1rem; }
+.draggo-sitemap-item > a { text-decoration: none; color: inherit; display: inline-block; padding: .2rem 0; }
+.draggo-sitemap-item > a:hover { text-decoration: underline; }
+
+/* ── Tier 4: Reader-Field ── */
+.draggo-rf-title { margin: 0; }
+.draggo-rf-teaser { margin: 0; }
+.draggo-rf-img { display: block; max-width: 100%; height: auto; }
+.draggo-rf-date, .draggo-rf-author { display: inline-block; }
+.draggo-rf-ph { opacity: .5; font-style: italic; }
+
+/* ── Tier 5: Countdown / Map / Share / TOC ── */
+.draggo-countdown { display: flex; justify-content: var(--bld-justify, flex-start); gap: 1.25rem; flex-wrap: wrap; }
+.draggo-cd-unit { display: flex; flex-direction: column; align-items: center; min-width: 3.5rem; }
+.draggo-cd-num { font-size: 2.25rem; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
+.draggo-cd-lbl { font-size: .75rem; text-transform: uppercase; letter-spacing: .05em; opacity: .7; margin-top: .25rem; }
+.draggo-cd-expired { font-size: 1.5rem; font-weight: 700; }
+
+.draggo-map { position: relative; }
+.draggo-map-frame { width: 100%; height: var(--map-h, 400px); border: 0; display: block; border-radius: 8px; }
+.draggo-map-consent { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1rem; height: var(--map-h, 400px); background: rgba(0,0,0,.05); border: 1px dashed rgba(0,0,0,.2); border-radius: 8px; padding: 1.5rem; text-align: center; }
+.draggo-map-load { background: #0a66ff; color: #fff; border: 0; border-radius: 6px; padding: .6rem 1.4rem; cursor: pointer; font-weight: 600; }
+
+.draggo-share { display: flex; justify-content: var(--bld-justify, flex-start); flex-wrap: wrap; gap: .6rem; }
+.draggo-share-link { display: inline-flex; align-items: center; justify-content: center; width: 2.6em; height: 2.6em; border-radius: 50%; background: rgba(0,0,0,.08); color: inherit; text-decoration: none; border: 0; cursor: pointer; transition: background .15s, transform .15s; }
+.draggo-share-link:hover { background: rgba(0,0,0,.16); transform: translateY(-2px); }
+.draggo-share-link .draggo-svg { width: 1.2em; height: 1.2em; }
+.draggo-share-copy.is-copied { background: #16a34a; color: #fff; }
+
+.draggo-toc { background: rgba(0,0,0,.03); border-left: 3px solid currentColor; padding: 1rem 1.25rem; border-radius: 6px; }
+.draggo-toc-title { font-weight: 700; margin: 0 0 .5rem; }
+.draggo-toc-list { list-style: none; margin: 0; padding: 0; }
+.draggo-toc-i { margin: .2rem 0; }
+.draggo-toc-h3 { padding-left: 1rem; }
+.draggo-toc-h4 { padding-left: 2rem; }
+.draggo-toc a { color: inherit; text-decoration: none; }
+.draggo-toc a:hover { text-decoration: underline; }
+
+/* ── Tier 5 (Batch 2): Price-Table / Price-List / Steps / Search ── */
+.draggo-pricetable { border: 1px solid rgba(0,0,0,.12); border-radius: 10px; padding: 1.75rem; text-align: center; background: #fff; }
+.draggo-pricetable--featured { border-color: #0a66ff; box-shadow: 0 10px 30px rgba(10,102,255,.15); transform: translateY(-4px); }
+.draggo-prt-title { margin: 0 0 .75rem; }
+.draggo-prt-price { display: flex; align-items: baseline; justify-content: center; gap: .25rem; margin-bottom: 1.25rem; }
+.draggo-prt-amount { font-size: 2.5rem; font-weight: 800; line-height: 1; }
+.draggo-prt-period { opacity: .65; }
+.draggo-prt-features { list-style: none; margin: 0 0 1.5rem; padding: 0; }
+.draggo-prt-feature { padding: .5rem 0; border-bottom: 1px solid rgba(0,0,0,.07); }
+.draggo-prt-btn { width: 100%; box-sizing: border-box; text-align: center; }
+
+.draggo-pricelist { list-style: none; margin: 0; padding: 0; }
+.draggo-prl-row { display: flex; align-items: baseline; gap: .5rem; padding: .45rem 0; }
+.draggo-prl-name { flex: 0 0 auto; font-weight: 600; }
+.draggo-prl-dots { flex: 1; border-bottom: 2px dotted rgba(0,0,0,.25); transform: translateY(-.2em); }
+.draggo-prl-price { flex: 0 0 auto; font-weight: 700; }
+
+.draggo-steps { list-style: none; margin: 0; padding: 0; }
+.draggo-step { display: flex; gap: 1rem; padding-bottom: 1.25rem; position: relative; }
+.draggo-step:not(:last-child)::before { content: ""; position: absolute; left: 1rem; top: 2.25rem; bottom: 0; width: 2px; background: rgba(0,0,0,.12); }
+.draggo-step-num { flex: 0 0 auto; width: 2rem; height: 2rem; border-radius: 50%; background: #0a66ff; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; position: relative; z-index: 1; }
+.draggo-step-title { margin: .2rem 0 .25rem; }
+.draggo-step-text { margin: 0; }
+
+.draggo-search { display: flex; justify-content: var(--bld-justify, flex-start); gap: .5rem; max-width: 100%; }
+.draggo-search-input { flex: 1; padding: .6rem .9rem; border: 1px solid rgba(0,0,0,.2); border-radius: 6px; font: inherit; }
+.draggo-search-btn { background: #0a66ff; color: #fff; border: 0; border-radius: 6px; padding: .6rem 1.2rem; cursor: pointer; font-weight: 600; }
+
+/* ── Tier 5 (Batch 3): Animated headline / Hotspot / Code ── */
+.draggo-anim-words { color: #0a66ff; }
+.draggo-anim-words.is-anim { display: inline-block; }
+.draggo-anim[data-effect="type"] .draggo-anim-words::after { content: "|"; opacity: .6; animation: draggo-caret 1s steps(1) infinite; }
+@keyframes draggo-caret { 50% { opacity: 0; } }
+
+.draggo-hotspot { position: relative; display: inline-block; max-width: 100%; }
+.draggo-hs-img { display: block; max-width: 100%; height: auto; }
+.draggo-hs-point { position: absolute; transform: translate(-50%, -50%); border: 0; background: none; padding: 0; cursor: pointer; }
+.draggo-hs-dot { display: flex; align-items: center; justify-content: center; width: 1.75rem; height: 1.75rem; border-radius: 50%; background: #0a66ff; color: #fff; font-size: .8rem; font-weight: 700; box-shadow: 0 0 0 rgba(10,102,255,.5); animation: draggo-pulse 2s infinite; }
+@keyframes draggo-pulse { 0% { box-shadow: 0 0 0 0 rgba(10,102,255,.5); } 70% { box-shadow: 0 0 0 12px rgba(10,102,255,0); } 100% { box-shadow: 0 0 0 0 rgba(10,102,255,0); } }
+.draggo-hs-tip { position: absolute; bottom: 130%; left: 50%; transform: translateX(-50%); background: #1b2330; color: #fff; padding: .4rem .7rem; border-radius: 6px; font-size: .85rem; white-space: nowrap; max-width: 240px; opacity: 0; pointer-events: none; transition: opacity .15s; }
+.draggo-hs-point:hover .draggo-hs-tip, .draggo-hs-point:focus .draggo-hs-tip { opacity: 1; }
+
+.draggo-code { border-radius: 8px; overflow: hidden; background: #1b2330; }
+.draggo-code-bar { display: flex; justify-content: space-between; align-items: center; padding: .4rem .8rem; background: rgba(255,255,255,.06); color: #cbd5e1; font-size: .8rem; }
+.draggo-code-lang { text-transform: uppercase; letter-spacing: .05em; }
+.draggo-code-copy { background: rgba(255,255,255,.1); border: 0; color: #fff; border-radius: 4px; padding: .2rem .6rem; cursor: pointer; font-size: .8rem; }
+.draggo-code-copy.is-copied { background: #16a34a; }
+.draggo-code-pre { margin: 0; padding: 1rem; overflow-x: auto; color: #e2e8f0; }
+.draggo-code-pre code { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: .9rem; line-height: 1.5; white-space: pre; }
+
+/* ── Tier 5 (Batch 4): Video playlist ── */
+.draggo-vplaylist { display: grid; grid-template-columns: 2fr 1fr; gap: 1rem; align-items: start; }
+@media (max-width: 767px) { .draggo-vplaylist { grid-template-columns: 1fr; } }
+.draggo-vp-stage { position: relative; width: 100%; padding-top: var(--vp-ratio, 56.25%); background: #000; border-radius: 8px; overflow: hidden; }
+.draggo-vp-frame, .draggo-vp-stage > video, .draggo-vp-stage > iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+.draggo-vp-play { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,.35); color: #fff; border: 0; cursor: pointer; font-size: 3rem; }
+.draggo-vp-play:hover { background: rgba(0,0,0,.5); }
+.draggo-vp-list { list-style: none; margin: 0; padding: 0; max-height: 360px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; }
+.draggo-vp-item { display: flex; align-items: center; gap: .6rem; width: 100%; text-align: left; background: rgba(0,0,0,.04); border: 0; border-radius: 6px; padding: .6rem .8rem; cursor: pointer; color: inherit; }
+.draggo-vp-item:hover { background: rgba(0,0,0,.09); }
+.draggo-vp-item.is-active { background: #0a66ff; color: #fff; }
+.draggo-vp-ico { flex: 0 0 auto; opacity: .8; }
+.draggo-vp-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Font Awesome icons (optional source) — size via parent font-size, like inline SVG. */
+.draggo-fa { display: inline-block; line-height: 1; }
+.draggo-icon .draggo-fa, .draggo-box-icon .draggo-fa, .draggo-flip-ico .draggo-fa { font-size: 1em; }
+
+/* ── Draggo gallery ── */
+.draggo-gallery--grid { display: grid; grid-template-columns: repeat(var(--ga-cols, 3), 1fr); gap: var(--ga-gap, 8px); }
+.draggo-gallery--tiles { display: grid; grid-template-columns: repeat(var(--ga-cols, 3), 1fr); gap: var(--ga-gap, 8px); }
+.draggo-gallery--masonry { column-count: var(--ga-cols, 3); column-gap: var(--ga-gap, 8px); }
+@media (max-width: 767px) { .draggo-gallery--grid, .draggo-gallery--tiles { grid-template-columns: repeat(2, 1fr); } .draggo-gallery--masonry { column-count: 2; } }
+.draggo-ga-item { display: block; position: relative; overflow: hidden; border-radius: 6px; text-decoration: none !important; }
+.draggo-gallery--masonry .draggo-ga-item { break-inside: avoid; margin-bottom: var(--ga-gap, 8px); }
+.draggo-ga-img { display: block; width: 100%; height: auto; }
+.draggo-gallery--grid .draggo-ga-img { aspect-ratio: auto; }
+/* Tiles: equal-size cells via padded frame + absolute cover. */
+.draggo-ga-frame { display: block; position: relative; width: 100%; padding-top: var(--ga-ratio, 100%); }
+.draggo-ga-frame .draggo-ga-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+/* Hover effects */
+.draggo-ga-img { transition: transform .35s ease, filter .35s ease; }
+.draggo-gallery--hover-zoom .draggo-ga-item:hover .draggo-ga-img { transform: scale(1.08); }
+.draggo-gallery--hover-grayscale .draggo-ga-img { filter: grayscale(1); }
+.draggo-gallery--hover-grayscale .draggo-ga-item:hover .draggo-ga-img { filter: grayscale(0); }
+.draggo-ga-ov { position: absolute; inset: 0; background: rgba(0,0,0,0); transition: background .3s; }
+.draggo-gallery--hover-overlay .draggo-ga-item:hover .draggo-ga-ov { background: rgba(0,0,0,.35); }
+/* Lightbox overlay */
+.draggo-lb { position: fixed; inset: 0; z-index: 10050; background: rgba(0,0,0,.9); display: flex; align-items: center; justify-content: center; }
+.draggo-lb img { max-width: 92vw; max-height: 88vh; border-radius: 4px; }
+.draggo-lb-close, .draggo-lb-prev, .draggo-lb-next { position: absolute; background: rgba(255,255,255,.12); color: #fff; border: 0; width: 48px; height: 48px; border-radius: 50%; cursor: pointer; font-size: 1.6rem; line-height: 1; }
+.draggo-lb-close { top: 1rem; right: 1rem; }
+.draggo-lb-prev { left: 1rem; top: 50%; transform: translateY(-50%); }
+.draggo-lb-next { right: 1rem; top: 50%; transform: translateY(-50%); }
+
+/* ── Draggo form element (native Contao form, styled) ──────────────── */
+.draggo-form { --df-radius: 8px; }
+/* Responsive per-field widths (draggo-fw-* tokens on the .widget wrapper).
+   .formbody is a wrapping flex row; un-classed fields stay full width.
+   Each <100% width subtracts ONE full gap from its basis so ANY mix of
+   widths on a row (50+25+25, 66+33, 33+33+33, 50+50 …) sums to <=100%-gap and
+   never overflows/wraps from rounding (flex-grow:0 holds the chosen width).
+   KEEP block order desktop → tablet → mobile: rules share specificity, so
+   source order decides which breakpoint wins (do not reshuffle). */
+.draggo-form .formbody { display: flex; flex-wrap: wrap; gap: 1rem; --df-gap: 1rem; }
+.draggo-form .formbody > .widget { flex: 1 1 100%; min-width: 0; }
+.draggo-form .formbody > .widget.draggo-fw-100 { flex: 0 1 100%; }
+.draggo-form .formbody > .widget.draggo-fw-75  { flex: 0 1 calc(75%      - var(--df-gap)); }
+.draggo-form .formbody > .widget.draggo-fw-66  { flex: 0 1 calc(66.6666% - var(--df-gap)); }
+.draggo-form .formbody > .widget.draggo-fw-50  { flex: 0 1 calc(50%      - var(--df-gap)); }
+.draggo-form .formbody > .widget.draggo-fw-33  { flex: 0 1 calc(33.3333% - var(--df-gap)); }
+.draggo-form .formbody > .widget.draggo-fw-25  { flex: 0 1 calc(25%      - var(--df-gap)); }
+@media (max-width: 991px) {
+    .draggo-form .formbody > .widget.draggo-fw-t-100 { flex: 0 1 100%; }
+    .draggo-form .formbody > .widget.draggo-fw-t-75  { flex: 0 1 calc(75%      - var(--df-gap)); }
+    .draggo-form .formbody > .widget.draggo-fw-t-66  { flex: 0 1 calc(66.6666% - var(--df-gap)); }
+    .draggo-form .formbody > .widget.draggo-fw-t-50  { flex: 0 1 calc(50%      - var(--df-gap)); }
+    .draggo-form .formbody > .widget.draggo-fw-t-33  { flex: 0 1 calc(33.3333% - var(--df-gap)); }
+    .draggo-form .formbody > .widget.draggo-fw-t-25  { flex: 0 1 calc(25%      - var(--df-gap)); }
+}
+@media (max-width: 767px) {
+    .draggo-form .formbody > .widget.draggo-fw-m-100 { flex: 0 1 100%; }
+    .draggo-form .formbody > .widget.draggo-fw-m-75  { flex: 0 1 calc(75%      - var(--df-gap)); }
+    .draggo-form .formbody > .widget.draggo-fw-m-66  { flex: 0 1 calc(66.6666% - var(--df-gap)); }
+    .draggo-form .formbody > .widget.draggo-fw-m-50  { flex: 0 1 calc(50%      - var(--df-gap)); }
+    .draggo-form .formbody > .widget.draggo-fw-m-33  { flex: 0 1 calc(33.3333% - var(--df-gap)); }
+    .draggo-form .formbody > .widget.draggo-fw-m-25  { flex: 0 1 calc(25%      - var(--df-gap)); }
+}
+.draggo-form .widget { display: flex; flex-direction: column; gap: .35rem; }
+.draggo-form .widget > label { font-weight: 600; font-size: .9rem; }
+.draggo-form .widget label .mandatory { color: #e5484d; margin-left: .15rem; }
+.draggo-form input[type=text], .draggo-form input[type=email], .draggo-form input[type=tel],
+.draggo-form input[type=url], .draggo-form input[type=number], .draggo-form input[type=password],
+.draggo-form input[type=date], .draggo-form input[type=file], .draggo-form textarea, .draggo-form select {
+    width: 100%; box-sizing: border-box; padding: .65rem .8rem; font: inherit;
+    border: 1px solid rgba(127,127,127,.4); border-radius: var(--df-radius); background: #fff; color: inherit;
+    transition: border-color .15s ease, box-shadow .15s ease;
+}
+.draggo-form textarea { min-height: 7rem; resize: vertical; }
+.draggo-form input:focus, .draggo-form textarea:focus, .draggo-form select:focus {
+    outline: none; border-color: var(--draggo-accent, #5e33f3); box-shadow: 0 0 0 3px rgba(94,51,243,.18);
+}
+.draggo-form .checkbox_container, .draggo-form .radio_container { display: flex; flex-direction: column; gap: .4rem; border: 0; padding: 0; margin: 0; }
+.draggo-form .checkbox_container span, .draggo-form .radio_container span { display: flex; align-items: center; gap: .45rem; font-weight: 400; }
+.draggo-form .explanation { font-size: .92rem; opacity: .85; }
+.draggo-form .error, .draggo-form p.error { color: #e5484d; font-size: .82rem; }
+.draggo-form .widget-submit { margin-top: .3rem; }
+.draggo-form button[type=submit], .draggo-form input[type=submit] {
+    display: inline-block; padding: .7rem 1.6rem; font: inherit; font-weight: 600; cursor: pointer;
+    color: #fff; background: #5e33f3; border: 0; border-radius: var(--df-radius);
+    transition: transform .12s ease, filter .15s ease;
+}
+.draggo-form button[type=submit]:hover, .draggo-form input[type=submit]:hover { filter: brightness(1.08); transform: translateY(-1px); }
+.draggo-form .confirmation, .draggo-form .form-confirmation { padding: 1rem 1.2rem; border-radius: var(--df-radius); background: rgba(46,160,67,.12); border: 1px solid rgba(46,160,67,.4); color: #1a7f37; }
+.draggo-form--empty .draggo-form-hint { padding: 1rem; border: 1px dashed rgba(127,127,127,.5); border-radius: var(--df-radius); color: rgba(127,127,127,.9); font-size: .9rem; text-align: center; }
+
+/* ── Hover transitions ─────────────────────────────────────────────────
+   Many Draggo interactive elements change colour/transform/shadow on hover.
+   Give them a consistent ease so the change animates instead of snapping.
+   (Only the animatable props — not `all` — to avoid layout jank.) */
+.draggo-btn, .draggo-alert-close, .draggo-flip-inner, .draggo-ga-item, .draggo-ga-img,
+.draggo-hs-point, .draggo-loop-card, .draggo-nav-item, .draggo-nav-item > a,
+.draggo-share-link, .draggo-social-link, .draggo-vp-item, .draggo-vp-play,
+.draggo-icon a, .draggo-iconbox, .draggo-imagebox, .draggo-cta a, .draggo-button a,
+.draggo-card, .draggo-pricetable, .draggo-flipbox, .draggo-logo a, .draggo-toc a,
+.draggo-form a, .draggo-tilt-card {
+    transition: color .2s ease, background-color .2s ease, border-color .2s ease,
+                transform .25s ease, box-shadow .25s ease, opacity .2s ease, filter .2s ease;
+}
+
+/* ── Open-Now availability badge ───────────────────────────────────── */
+.draggo-opennow{display:inline-flex;align-items:center;gap:.5em;padding:.4em .85em;border-radius:999px;font-weight:600;line-height:1;background:rgba(127,127,127,.12);}
+.draggo-opennow .draggo-on-dot{width:.62em;height:.62em;border-radius:50%;background:currentColor;flex:0 0 auto;}
+.draggo-opennow.is-open{color:#1a7f37;}
+.draggo-opennow.is-closed{color:#b42318;}
+.draggo-opennow.is-open .draggo-on-dot{animation:draggo-on-pulse 2.2s ease-out infinite;}
+@keyframes draggo-on-pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.8)}}
+.draggo-opennow--empty{color:#888;font-style:italic;font-weight:400;background:transparent;}
+@media (prefers-reduced-motion:reduce){.draggo-opennow .draggo-on-dot{animation:none;}}
+
+/* ── Dark/Light theme toggle element ───────────────────────────────── */
+.draggo-themetoggle { display: inline-flex; align-items: center; justify-content: center; width: 2.4em; height: 2.4em; border-radius: 50%; border: 1px solid currentColor; background: transparent; color: inherit; cursor: pointer; font-size: 1rem; line-height: 1; transition: background .2s, color .2s, transform .2s; }
+.draggo-themetoggle:hover { transform: scale(1.08); }
+.draggo-tt-sun { display: none; }
+.draggo-tt-moon { display: inline-block; }
+/* Sun shows when dark is active (click → light); moon when light is active. */
+:root[data-draggo-theme="dark"] .draggo-tt-sun { display: inline-block; }
+:root[data-draggo-theme="dark"] .draggo-tt-moon { display: none; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-draggo-theme]) .draggo-tt-sun { display: inline-block; }
+  :root:not([data-draggo-theme]) .draggo-tt-moon { display: none; }
+}
+/* Sizes — the control is em-based, so font-size scales the whole thing. */
+.draggo-tt--sm { font-size: .8rem; }
+.draggo-tt--md { font-size: 1rem; }
+.draggo-tt--lg { font-size: 1.3rem; }
+/* Icon + Text variant: pill with a label beside the (flipping) icon. */
+.draggo-tt--text { width: auto; border-radius: 999px; gap: .5em; padding: 0 .95em; }
+.draggo-tt--text .draggo-tt-label { font-size: .9em; white-space: nowrap; }
+/* Schiebeschalter (state indicator): sun=hell (links), moon=dunkel (rechts),
+   sliding knob marks the active side. Both icons stay visible, dimmed. */
+.draggo-tt--switch { width: 3.4em; height: 1.7em; border-radius: 1em; padding: 0 .42em; justify-content: space-between; gap: .25em; position: relative; }
+.draggo-tt--switch:hover { transform: none; }
+.draggo-tt--switch .draggo-tt-moon,
+.draggo-tt--switch .draggo-tt-sun { display: inline-block !important; font-size: .78em; opacity: .5; transition: opacity .2s; }
+.draggo-tt--switch .draggo-tt-sun { opacity: 1; }
+.draggo-tt-knob { position: absolute; top: 50%; left: .22em; width: 1.25em; height: 1.25em; border-radius: 50%; background: currentColor; transform: translateY(-50%); transition: transform .2s; }
+:root[data-draggo-theme="dark"] .draggo-tt--switch .draggo-tt-knob { transform: translate(1.7em, -50%); }
+:root[data-draggo-theme="dark"] .draggo-tt--switch .draggo-tt-sun { opacity: .5; }
+:root[data-draggo-theme="dark"] .draggo-tt--switch .draggo-tt-moon { opacity: 1; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-draggo-theme]) .draggo-tt--switch .draggo-tt-knob { transform: translate(1.7em, -50%); }
+  :root:not([data-draggo-theme]) .draggo-tt--switch .draggo-tt-sun { opacity: .5; }
+  :root:not([data-draggo-theme]) .draggo-tt--switch .draggo-tt-moon { opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) { .draggo-themetoggle, .draggo-tt-knob { transition: none; } }

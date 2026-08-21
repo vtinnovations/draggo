@@ -1,0 +1,49 @@
+/*
+ * Draggo
+ *
+ * Package: vtinnovations/draggo
+ * Copyright: V&T Innovations Team
+ * Licence: LGPL-3.0-or-later
+ * Website: https://v-t.one
+ */
+
+/* Floating Draggo launch button, frontend, backend-users only.
+   The button IS the Draggo mascot head (transparent PNG) — no box, just the
+   head floating with a soft drop-shadow so it reads on any page background. */
+#draggo-launch {
+    position: fixed;
+    top: 16px;
+    right: 16px;
+    z-index: 2147483000;
+    width: 58px;
+    height: 58px;
+    display: block;
+    padding: 0;
+    background: none;
+    border: 0;
+    line-height: 0;
+    text-decoration: none;
+    cursor: pointer;
+    transition: transform .18s cubic-bezier(.34, 1.56, .64, 1), filter .18s ease;
+    -webkit-tap-highlight-color: transparent;
+}
+#draggo-launch .draggo-launch-img {
+    width: 100%;
+    height: 100%;
+    display: block;
+    object-fit: contain;
+    /* Soft shadow lifts the mascot off the page on light and dark backgrounds. */
+    filter: drop-shadow(0 6px 14px rgba(46, 20, 120, .45)) drop-shadow(0 1px 3px rgba(0, 0, 0, .3));
+    pointer-events: none;
+}
+#draggo-launch:hover {
+    transform: translateY(-2px) scale(1.09) rotate(-3deg);
+    filter: drop-shadow(0 10px 22px rgba(94, 51, 243, .55));
+}
+#draggo-launch:active {
+    transform: scale(.95);
+}
+@media (prefers-reduced-motion: reduce) {
+    #draggo-launch { transition: none; }
+    #draggo-launch:hover { transform: none; }
+}

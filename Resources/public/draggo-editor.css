@@ -1,0 +1,1285 @@
+/*
+ * Draggo
+ *
+ * Package: vtinnovations/draggo
+ * Copyright: V&T Innovations Team
+ * Licence: LGPL-3.0-or-later
+ * Website: https://v-t.one
+ */
+
+/* Draggo frontend editor. Light + dark: follows the OS by default, but an
+   explicit [data-theme] on <html> (set by the toolbar toggle) overrides it. */
+
+:root {
+    --draggo-bg: #f4f5f7;
+    --draggo-panel: #ffffff;
+    --draggo-panel-2: #fafbfc;
+    --draggo-border: #d7dbe0;
+    --draggo-accent: #2f6fed;
+    --draggo-text: #1b1f24;
+    --draggo-muted: #6b7280;
+    --draggo-chip: #ffffff;
+    --draggo-row-bg: #eef3ff;
+    --draggo-col-bg: #ffffff;
+    /* Primary-button gradient — intentionally the SAME in light + dark. */
+    --draggo-btn-grad: linear-gradient(100deg, #7C3AED 0%, #6D28D9 70%, #5B21B6 100%);
+}
+
+/* Dark values, shared by the OS preference (when no manual choice) and the
+   explicit dark override. */
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme]) {
+        --draggo-bg: #15171c;
+        --draggo-panel: #1d2026;
+        --draggo-panel-2: #23272f;
+        --draggo-border: #353a44;
+        --draggo-accent: #5b8cff;
+        --draggo-text: #e6e8ec;
+        --draggo-muted: #9aa3b2;
+        --draggo-chip: #23272f;
+        --draggo-row-bg: #1b2333;
+        --draggo-col-bg: #1d2026;
+    }
+}
+:root[data-theme="dark"] {
+    --draggo-bg: #15171c;
+    --draggo-panel: #1d2026;
+    --draggo-panel-2: #23272f;
+    --draggo-border: #353a44;
+    --draggo-accent: #5b8cff;
+    --draggo-text: #e6e8ec;
+    --draggo-muted: #9aa3b2;
+    --draggo-chip: #23272f;
+    --draggo-row-bg: #1b2333;
+    --draggo-col-bg: #1d2026;
+}
+
+* { box-sizing: border-box; }
+
+body {
+    margin: 0;
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    color: var(--draggo-text);
+    background: var(--draggo-bg);
+}
+
+#draggo-editor {
+    display: grid;
+    grid-template-columns: 360px 1fr;
+    height: 100vh;
+    overflow: hidden; /* each pane scrolls on its own */
+    transition: grid-template-columns .25s ease;
+}
+/* Collapsed left bar → canvas full-width (edit/preview the page wide). */
+#draggo-editor.is-side-collapsed { grid-template-columns: 0 1fr; }
+.is-side-collapsed .draggo-side {
+    overflow: hidden;
+    border-right: 0;
+    opacity: 0;
+    pointer-events: none;
+}
+
+/* Left sidebar with tabs (Inhalt / Layout). */
+.draggo-side {
+    background: var(--draggo-panel);
+    border-right: 1px solid var(--draggo-border);
+    height: 100vh;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    min-width: 0; /* let the grid collapse this track to 0 */
+    transition: opacity .2s ease;
+}
+.draggo-tabs {
+    display: flex;
+    position: sticky;
+    top: 0;
+    z-index: 3;
+    background: var(--draggo-panel);
+    border-bottom: 1px solid var(--draggo-border);
+}
+.draggo-tabs button {
+    flex: 1;
+    padding: .65rem;
+    border: none;
+    background: none;
+    color: var(--draggo-muted);
+    cursor: pointer;
+    font-weight: 600;
+    font-size: .85rem;
+    border-bottom: 2px solid transparent;
+}
+.draggo-tabs button.is-on { color: var(--draggo-text); border-bottom-color: var(--draggo-accent); }
+.draggo-pane { padding: 1rem; }
+.draggo-pane[hidden] { display: none; }
+.draggo-pane h2 { margin-top: 0; font-size: 1rem; }
+.draggo-ins-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: .35rem .5rem;
+    margin-bottom: .6rem;
+    font-size: .8rem;
+}
+/* KI element generator (chat) */
+.draggo-ki-log { display: flex; flex-direction: column; gap: .5rem; max-height: 50vh; overflow-y: auto; padding: .5rem 0; }
+.draggo-ki-msg { padding: .5rem .7rem; border-radius: 10px; font-size: .82rem; line-height: 1.45; white-space: pre-wrap; max-width: 92%; }
+.draggo-ki-bot { background: var(--draggo-chip, #f1f4fa); align-self: flex-start; border-bottom-left-radius: 3px; }
+.draggo-ki-user { background: var(--draggo-accent, #0a66ff); color: #fff; align-self: flex-end; border-bottom-right-radius: 3px; }
+.draggo-ki-err { background: #fdecea; color: #8a1c12; align-self: flex-start; border: 1px solid #f1aeb5; border-bottom-left-radius: 3px; }
+.draggo-ki-bar { display: flex; align-items: center; gap: .5rem; margin-bottom: .5rem; flex-wrap: wrap; }
+.draggo-ki-bar #draggo-ki-new { font-size: .76rem; padding: .3rem .6rem; border: 1px solid var(--draggo-border, #d4dae6); border-radius: 6px; background: var(--draggo-chip, #f1f4fa); color: var(--draggo-text); cursor: pointer; }
+.draggo-ki-editing { font-size: .74rem; font-weight: 700; color: var(--draggo-accent, #0a66ff); }
+.draggo-ki-types { margin-top: .6rem; }
+.draggo-ki-typelist { display: flex; flex-direction: column; gap: .25rem; padding: .3rem 0; }
+.draggo-ki-typerow { display: flex; align-items: center; gap: .35rem; font-size: .8rem; }
+.draggo-ki-typelabel { flex: 1; }
+.draggo-ki-typerow button { border: 1px solid var(--draggo-border, #d4dae6); background: var(--draggo-chip, #f1f4fa); border-radius: 5px; cursor: pointer; padding: .15rem .4rem; }
+
+/* Working/typing indicator (three bouncing dots). */
+.draggo-ki-typing { display: inline-flex; gap: 4px; align-items: center; }
+.draggo-ki-typing span { width: 7px; height: 7px; border-radius: 50%; background: var(--draggo-muted, #6b7280); opacity: .4; animation: draggo-ki-bounce 1.2s infinite ease-in-out; }
+.draggo-ki-typing span:nth-child(2) { animation-delay: .15s; }
+.draggo-ki-typing span:nth-child(3) { animation-delay: .3s; }
+@keyframes draggo-ki-bounce { 0%, 80%, 100% { transform: translateY(0); opacity: .4; } 40% { transform: translateY(-5px); opacity: 1; } }
+
+.draggo-ki-input { display: flex; gap: .4rem; margin-top: .5rem; align-items: flex-end; }
+.draggo-ki-input textarea { flex: 1; min-width: 0; min-height: 44px; resize: vertical; border: 1px solid var(--draggo-border, #d4dae6); border-radius: 6px; padding: .45rem .55rem; font: inherit; box-sizing: border-box; }
+.draggo-ki-input button { flex: 0 0 auto; }
+
+/* "Whole page from a brief" + "Page from your own content" — full-width textareas. */
+.draggo-ki-brief .draggo-ins-accbody, .draggo-ki-inject .draggo-ins-accbody { display: flex; flex-direction: column; gap: .5rem; }
+.draggo-ki-brief textarea, .draggo-ki-inject textarea { width: 100%; box-sizing: border-box; resize: vertical; min-height: 80px; border: 1px solid var(--draggo-border, #d4dae6); border-radius: 6px; padding: .5rem .6rem; font: inherit; line-height: 1.45; }
+.draggo-ki-inject textarea { min-height: 120px; }
+.draggo-ki-brief #draggo-brief-go, .draggo-ki-inject #draggo-inject-go { width: 100%; }
+.draggo-ki-brief .draggo-hint { margin: 0; }
+.draggo-ki-preview { margin: .6rem 0; border: 1px solid var(--draggo-border, #d4dae6); border-radius: 8px; overflow: hidden; }
+.draggo-ki-preview-head { padding: .4rem .6rem; font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; background: var(--draggo-chip, #f1f4fa); color: var(--draggo-muted, #6b7280); }
+.draggo-ki-preview-body { padding: .8rem; background: #fff; color: #111; min-height: 90px; }
+/* Sane base sizing for the sandboxed preview so placeholder images don't
+   collapse to tiny grey squares; the element's own scoped CSS overrides this. */
+.draggo-blk-preview img { max-width: 100%; height: auto; display: block; }
+.draggo-blk-preview img:not([width]):not([style*="width"]):not([style*="height"]) { width: 120px; }
+.draggo-blk-preview * { max-width: 100%; }
+.draggo-ki-actions { display: flex; gap: .5rem; padding: .5rem .6rem; border-top: 1px solid var(--draggo-border, #d4dae6); }
+
+/* Structure outline / navigator */
+.draggo-tree { display: flex; flex-direction: column; gap: 1px; }
+.draggo-tree-node { display: flex; align-items: center; gap: .4rem; width: 100%; text-align: left; border: 0; background: transparent; color: var(--draggo-text); cursor: pointer; padding: .3rem .4rem; border-radius: 5px; font-size: .8rem; }
+.draggo-tree-node:hover { background: var(--draggo-chip, #f1f4fa); }
+.draggo-tree-ic { flex: 0 0 auto; opacity: .8; }
+.draggo-tree-lb { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Restore points list */
+.draggo-hist-list { margin-top: .5rem; display: flex; flex-direction: column; gap: .35rem; }
+.draggo-hist-row { display: flex; align-items: center; gap: .5rem; justify-content: space-between; font-size: .78rem; border: 1px solid var(--draggo-border, #d4dae6); border-radius: 6px; padding: .35rem .5rem; }
+.draggo-hist-label small { color: var(--draggo-muted, #6b7280); }
+.draggo-hist-restore { flex: 0 0 auto; border: 1px solid var(--draggo-border, #d4dae6); background: var(--draggo-chip, #f1f4fa); border-radius: 5px; padding: .2rem .5rem; cursor: pointer; }
+
+/* Inspector accordion groups (Layout / Hintergrund / Abstände / …). */
+.draggo-ins-acc { margin-bottom: .5rem; border: 1px solid var(--draggo-border, #d4dae6); border-radius: 7px; overflow: hidden; }
+.draggo-ins-acc > summary { padding: .55rem .7rem; font-size: .78rem; font-weight: 700; background: var(--draggo-chip, #f1f4fa); cursor: pointer; list-style: none; }
+.draggo-ins-acc > summary::-webkit-details-marker { display: none; }
+.draggo-ins-acc > summary::after { content: "▾"; float: right; opacity: .6; transition: transform .15s; }
+.draggo-ins-acc[open] > summary::after { transform: rotate(180deg); }
+.draggo-ins-accbody { padding: .7rem; }
+.draggo-ins-accbody > .draggo-ins-row:last-child,
+.draggo-ins-accbody > label.draggo-ins-row:last-child { margin-bottom: 0; }
+
+/* Section divider inside the inspector (e.g. "Verlauf", "Overlay"). */
+.draggo-ins-sep {
+    margin: 1rem 0 .6rem;
+    padding-bottom: .25rem;
+    border-bottom: 1px solid var(--draggo-border, #d4dae6);
+    font-size: .72rem;
+    font-weight: 700;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    color: var(--draggo-muted, #6b7280);
+}
+/* Composite/wide controls drop onto their own full-width line (no overflow). */
+.draggo-ins-row > .draggo-ins-dim,
+.draggo-ins-row > .draggo-ins-color,
+.draggo-ins-row > .draggo-ins-aligns,
+.draggo-ins-row > .draggo-ins-area,
+.draggo-ins-row > .draggo-ins-select,
+.draggo-ins-row > .draggo-ins-num,
+.draggo-ins-row > .draggo-ins-text { flex: 1 1 100%; min-width: 0; box-sizing: border-box; max-width: 100%; }
+.draggo-ins-row > span { flex: 1 1 100%; }
+.draggo-ins-dim { display: flex; flex-wrap: nowrap; gap: .25rem; width: 100%; }
+.draggo-ins-dim input { flex: 1 1 0; width: auto; min-width: 0; }
+.draggo-ins-dim select { flex: 0 0 52px; }
+.draggo-ins-color { display: flex; flex-wrap: wrap; align-items: center; gap: .25rem; }
+.draggo-ins-color .draggo-ins-text { flex: 1 1 120px; min-width: 0; }
+.draggo-ins-color .draggo-file-pick, .draggo-ins-color > button { flex: 0 0 auto; white-space: nowrap; }
+.draggo-ins-color { display: inline-flex; align-items: center; gap: .25rem; }
+.draggo-ins-color input[type=color] { width: 38px; height: 26px; border: 1px solid var(--draggo-border); border-radius: 4px; background: none; cursor: pointer; }
+.draggo-ins-alpha { width: 54px; flex: 0 0 auto; cursor: pointer; }
+.draggo-ins-hex { width: 84px; flex: 0 1 auto; min-width: 0; padding: .25rem .35rem; border: 1px solid var(--draggo-border); border-radius: 4px; background: var(--draggo-chip); color: var(--draggo-text); font-family: ui-monospace, monospace; font-size: .72rem; }
+.draggo-ins-color button,
+.draggo-ins-align {
+    border: 1px solid var(--draggo-border);
+    background: var(--draggo-chip);
+    color: var(--draggo-text);
+    border-radius: 4px;
+    cursor: pointer;
+    min-width: 26px; height: 26px;
+    font-size: .8rem;
+}
+.draggo-ins-select { padding: .25rem .4rem; border: 1px solid var(--draggo-border); border-radius: 4px; background: var(--draggo-chip); color: var(--draggo-text); }
+.draggo-ins-area { width: 100%; box-sizing: border-box; border: 1px solid var(--draggo-border); border-radius: 4px; background: var(--draggo-chip); color: var(--draggo-text); font-family: ui-monospace, monospace; font-size: .75rem; padding: .35rem .5rem; resize: vertical; }
+/* Per-side dimensions control (top/right/bottom/left + unit). */
+.draggo-ins-dim { display: inline-flex; gap: .2rem; align-items: center; }
+.draggo-ins-dim input { width: 40px; padding: .2rem .25rem; border: 1px solid var(--draggo-border); border-radius: 4px; background: var(--draggo-chip); color: var(--draggo-text); }
+.draggo-ins-dim select { width: 50px; }
+/* Readable placeholders (better contrast on the dark panel). */
+.draggo-side input::placeholder, .draggo-side textarea::placeholder { color: #9aa6b8; opacity: 1; }
+.draggo-ins-row:has(.draggo-ins-area) { flex-direction: column; align-items: stretch; }
+.draggo-ins-aligns { display: inline-flex; gap: .25rem; }
+.draggo-ins-align { display: inline-flex; align-items: center; justify-content: center; }
+.draggo-ins-align svg { display: block; }
+.draggo-ins-align.is-on { border-color: var(--draggo-accent); color: var(--draggo-accent); background: var(--draggo-row-bg); }
+.draggo-ins-col { flex-direction: column; align-items: stretch; gap: .25rem; }
+.draggo-ins-text { width: 100%; padding: .3rem .4rem; border: 1px solid var(--draggo-border); border-radius: 4px; background: var(--draggo-chip); color: var(--draggo-text); font-size: .78rem; box-sizing: border-box; }
+.draggo-ins-num { width: 90px; padding: .3rem .4rem; border: 1px solid var(--draggo-border); border-radius: 4px; background: var(--draggo-chip); color: var(--draggo-text); font-size: .78rem; }
+
+/* Clearer "currently editing" highlight (#6) */
+.draggo-canvas .draggo-section.is-target { outline: 3px solid var(--draggo-accent); outline-offset: 2px; box-shadow: 0 0 0 4px rgba(47,111,237,.18); }
+.draggo-canvas .draggo-row.is-target { outline: 3px solid #7aa2f7; outline-offset: 1px; }
+.draggo-canvas .draggo-col.is-target { outline: 3px solid var(--draggo-accent); outline-offset: -1px; background: #eef3ff; }
+/* Selected element chip keeps a persistent border the whole time it's edited. */
+.draggo-canvas .draggo-item.is-target { outline: 3px solid var(--draggo-accent); outline-offset: 2px; box-shadow: 0 0 0 4px rgba(47,111,237,.18); position: relative; }
+.draggo-canvas .is-target::after {
+    content: 'bearbeiten';
+    position: absolute;
+    top: -10px; left: 8px;
+    background: var(--draggo-accent);
+    color: #fff;
+    font-size: .6rem;
+    padding: .05rem .4rem;
+    border-radius: 4px;
+    pointer-events: none;
+}
+.draggo-canvas .draggo-section, .draggo-canvas .draggo-row, .draggo-canvas .draggo-col { position: relative; }
+
+.draggo-group h3 { font-size: .8rem; text-transform: uppercase; color: var(--draggo-muted); margin: 1rem 0 .4rem; }
+
+/* Element buttons: 2 per row, icon on top, draggable. */
+.draggo-elements {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: .4rem;
+}
+.draggo-palette-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: .25rem;
+    padding: .6rem .35rem;
+    border: 1px solid var(--draggo-border);
+    border-radius: 8px;
+    background: var(--draggo-chip);
+    color: var(--draggo-text);
+    cursor: grab;
+    font-size: .72rem;
+    text-align: center;
+    min-height: 64px;
+}
+.draggo-palette-item:hover { border-color: var(--draggo-accent); }
+.draggo-palette-item:active { cursor: grabbing; }
+.draggo-pi-icon { font-size: 1.4rem; line-height: 1; }
+.draggo-pi-label { line-height: 1.2; }
+
+.draggo-main { display: flex; flex-direction: column; height: 100vh; overflow-y: auto; }
+.draggo-toolbar {
+    padding: .75rem 1.5rem;
+    border-bottom: 1px solid var(--draggo-border);
+    background: var(--draggo-panel);
+    position: sticky;
+    top: 0;
+    z-index: 5;
+}
+
+/* Collapsible "Strukturen" — hidden until opened. */
+.draggo-fold { margin-bottom: 1rem; border: 1px solid var(--draggo-border); border-radius: 8px; background: var(--draggo-panel-2); }
+.draggo-fold > summary {
+    cursor: pointer;
+    list-style: none;
+    padding: .55rem .75rem;
+    font-weight: 600;
+    font-size: .95rem;
+    user-select: none;
+}
+.draggo-fold > summary::-webkit-details-marker { display: none; }
+.draggo-fold > summary::before { content: '▸ '; color: var(--draggo-muted); }
+.draggo-fold[open] > summary::before { content: '▾ '; }
+.draggo-fold > .draggo-hint,
+.draggo-fold > .draggo-structures { padding: 0 .75rem; }
+.draggo-fold > .draggo-structures { padding-bottom: .75rem; }
+
+/* Insert-a-container bars between sections. */
+.draggo-insert { display: flex; justify-content: center; padding: .25rem 0; }
+.draggo-insert-btn {
+    border: 1px dashed var(--draggo-border);
+    background: transparent;
+    color: var(--draggo-muted);
+    border-radius: 999px;
+    padding: .25rem .9rem;
+    font-size: .72rem;
+    cursor: pointer;
+    opacity: .65;
+    transition: opacity .1s, border-color .1s, color .1s;
+}
+.draggo-insert-btn:hover { opacity: 1; border-color: var(--draggo-accent); color: var(--draggo-accent); border-style: solid; }
+/* Unified toolbar control metrics — every control shares the same height,
+   radius, font + 1px border so the bar reads as one consistent system. */
+.draggo-toolbar button {
+    border: 1px solid var(--draggo-border);
+    background: var(--draggo-chip);
+    color: var(--draggo-text);
+    border-radius: 7px;
+    padding: .42rem .7rem;
+    cursor: pointer;
+    font-size: .8rem;
+    font-weight: 600;
+    line-height: 1.1;
+}
+.draggo-toolbar button:hover { border-color: var(--draggo-accent); }
+/* The one primary action is accent-filled; everything else is an outlined chip. */
+#draggo-add-container {
+    border-color: transparent;
+    background: var(--draggo-btn-grad);
+    color: #fff;
+}
+#draggo-add-container:hover { filter: brightness(1.08); border-color: transparent; }
+
+/* Left-bar collapse toggle — compact square at the far left of the toolbar. */
+#draggo-side-toggle { padding: .42rem .55rem; flex: 0 0 auto; }
+#draggo-side-toggle.is-collapsed { border-color: var(--draggo-accent); color: var(--draggo-accent); }
+
+/* Page switcher — jump to another page in the same site root. */
+.draggo-page-switch {
+    max-width: 220px;
+    border: 1px solid var(--draggo-border);
+    background: var(--draggo-chip);
+    color: var(--draggo-text);
+    border-radius: 7px;
+    padding: .42rem .55rem;
+    font-size: .8rem;
+    font-weight: 600;
+    line-height: 1.1;
+    cursor: pointer;
+}
+.draggo-page-switch:hover { border-color: var(--draggo-accent); }
+.draggo-page-switch option { font-weight: 500; }
+
+/* Live-preview link — accent-filled, sits at the right with the tools. */
+.draggo-preview-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: .35rem;
+    border: 1px solid transparent;
+    background: var(--draggo-btn-grad);
+    color: #fff;
+    border-radius: 7px;
+    padding: .42rem .7rem;
+    font-size: .8rem;
+    font-weight: 600;
+    line-height: 1.1;
+    text-decoration: none;
+    cursor: pointer;
+    white-space: nowrap;
+}
+.draggo-preview-btn:hover { filter: brightness(1.08); }
+
+.draggo-canvas { padding: 0 0 2rem; flex: 1; }
+.draggo-empty { color: var(--draggo-muted); }
+.draggo-hint { font-size: .75rem; color: var(--draggo-muted); margin: 0 0 .75rem; }
+
+.draggo-structures { display: flex; flex-wrap: wrap; gap: .35rem; }
+.draggo-structure-item {
+    flex: 1 1 calc(50% - .35rem);
+    padding: .45rem .4rem;
+    border: 1px dashed var(--draggo-border);
+    border-radius: 6px;
+    background: var(--draggo-chip);
+    color: var(--draggo-text);
+    cursor: pointer;
+    font-size: .72rem;
+    text-align: center;
+}
+.draggo-structure-item:hover { border-color: var(--draggo-accent); border-style: solid; }
+
+/* Prebuilt section templates (Vorlagen) */
+.draggo-templates { display: flex; flex-direction: column; gap: .35rem; padding: 0 0 .5rem; }
+.draggo-template-item {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    width: 100%;
+    padding: .5rem .55rem;
+    border: 1px solid var(--draggo-border);
+    border-radius: 7px;
+    background: var(--draggo-chip);
+    color: var(--draggo-text);
+    cursor: grab;
+    font-size: .76rem;
+    text-align: left;
+}
+.draggo-template-item:hover { border-color: var(--draggo-accent); }
+.draggo-tpl-icon { font-size: 1.1rem; line-height: 1; flex: 0 0 auto; }
+.draggo-tpl-label { flex: 1; }
+
+/* Container drag handle + operations in the section header */
+.draggo-section-grip { cursor: grab; color: var(--draggo-muted); font-size: .95rem; margin-right: .5rem; user-select: none; }
+.draggo-section-grip:active { cursor: grabbing; }
+.draggo-section.is-dragging { opacity: .45; outline: 2px dashed var(--draggo-accent); }
+.draggo-section-ops { display: inline-flex; gap: .25rem; margin-left: auto; }
+.draggo-section-op {
+    border: 1px solid var(--draggo-border);
+    background: var(--draggo-chip);
+    color: var(--draggo-text);
+    border-radius: 4px;
+    width: 24px; height: 24px;
+    cursor: pointer;
+    font-size: .8rem;
+    line-height: 1;
+}
+.draggo-section-op:hover:not(:disabled) { border-color: var(--draggo-accent); }
+.draggo-section-op:disabled { opacity: .35; cursor: default; }
+
+/* Containers span the full editor width (full-bleed), like the real page. */
+.draggo-section {
+    border: 1px solid var(--draggo-border);
+    border-left: 0;
+    border-right: 0;
+    border-radius: 0;
+    margin: 0;
+    background: var(--draggo-panel);
+    width: 100%;
+}
+.draggo-section.is-target { border-color: var(--draggo-accent); box-shadow: 0 0 0 3px rgba(47,111,237,.12); }
+.draggo-section-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: .5rem .75rem;
+    cursor: pointer;
+    font-size: .8rem;
+    border-bottom: 1px solid var(--draggo-border);
+    background: var(--draggo-panel-2);
+    border-radius: 8px 8px 0 0;
+}
+.draggo-section-title { font-weight: 600; }
+.draggo-section-col {
+    font-size: .65rem;
+    text-transform: uppercase;
+    color: var(--draggo-muted);
+    border: 1px solid var(--draggo-border);
+    border-radius: 4px;
+    padding: .1rem .4rem;
+}
+.draggo-section-body { padding: .75rem; min-height: 2rem; }
+
+/* ── Visual grid row ───────────────────────────────────────────── */
+.draggo-row {
+    border: 1px solid var(--draggo-border);
+    border-radius: 8px;
+    margin-bottom: .75rem;
+    overflow: hidden;
+}
+.draggo-row-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: .35rem .6rem;
+    font-size: .72rem;
+    color: var(--draggo-muted);
+    background: var(--draggo-row-bg);
+    border-bottom: 1px solid var(--draggo-border);
+}
+.draggo-row-del {
+    border: none;
+    background: transparent;
+    color: #b91c1c;
+    cursor: pointer;
+    font-size: .72rem;
+}
+/* gap MUST stay 0: with flex-basis percentages a gap pushes the last column
+   below (50%+50%+gap > 100%). Columns are separated by their own border. */
+.draggo-cols { display: flex; flex-wrap: wrap; gap: 0; padding: .5rem; }
+.draggo-col {
+    min-width: 80px;
+    min-height: 70px;
+    border: 1px dashed var(--draggo-border);
+    border-radius: 6px;
+    padding: .4rem;
+    background: transparent;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
+    outline: 2px solid transparent;
+    outline-offset: -2px;
+}
+.draggo-col.is-target { border-color: var(--draggo-accent); border-style: solid; background: var(--draggo-row-bg); }
+.draggo-col.is-dragover { border-color: var(--draggo-accent); border-style: solid; background: var(--draggo-row-bg); box-shadow: inset 0 0 0 2px var(--draggo-accent); }
+.draggo-col-label {
+    font-size: .6rem;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    color: var(--draggo-muted);
+    margin-bottom: .35rem;
+}
+.draggo-col-list { flex: 1; min-height: 2rem; }
+
+.draggo-section-body.is-dragover { background: var(--draggo-row-bg); }
+.draggo-item-grip { color: var(--draggo-muted); cursor: grab; font-size: .8rem; }
+.draggo-col-hint {
+    font-size: .68rem;
+    color: var(--draggo-muted);
+    text-align: center;
+    padding: .25rem 0 0;
+    pointer-events: auto;
+}
+
+/* Element = transparent wrapper so the preview looks exactly like the FE. */
+.draggo-item {
+    position: relative;
+    margin: 0;
+    cursor: grab;
+}
+.draggo-item.is-dragging { opacity: .4; }
+.draggo-item:hover { outline: 2px solid var(--draggo-accent); outline-offset: -1px; }
+/* Floating hover toolbar — absolute, adds no layout height. */
+.draggo-item-bar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    display: flex;
+    align-items: center;
+    gap: .35rem;
+    padding: .12rem .4rem;
+    background: var(--draggo-accent);
+    border-radius: 0 0 6px 0;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .1s;
+    z-index: 110;
+}
+.draggo-item:hover .draggo-item-bar { opacity: 1; pointer-events: auto; }
+.draggo-item-bar .draggo-item-grip { color: #fff; }
+.draggo-item-spacer { display: none; }
+.draggo-item-type {
+    font-size: .6rem;
+    text-transform: uppercase;
+    color: #fff;
+    background: rgba(0,0,0,.22);
+    padding: .05rem .35rem;
+    border-radius: 3px;
+}
+.draggo-item-edit,
+.draggo-item-delete {
+    border: none;
+    background: transparent;
+    color: #fff;
+    cursor: pointer;
+    font-size: .9rem;
+    padding: 0 .15rem;
+    line-height: 1;
+}
+/* Live preview = real rendered frontend HTML, transparent like the page. */
+.draggo-item-preview { background: transparent; color: inherit; }
+.draggo-item-preview img,
+.draggo-item-preview video,
+.draggo-item-preview iframe { max-width: 100%; height: auto; }
+.draggo-item-empty {
+    padding: .5rem .75rem;
+    color: var(--draggo-muted);
+    font-size: .8rem;
+    border: 1px dashed var(--draggo-border);
+    border-radius: 6px;
+}
+.draggo-item-empty span { opacity: .7; }
+.draggo-item.is-editing { display: block; cursor: default; }
+
+/* Foreign structural wrapper (e.g. PCT autogrid start/stop) — slim, inert marker. */
+.draggo-item-wrap {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    padding: .15rem .6rem;
+    margin: .1rem 0;
+    font-size: .68rem;
+    color: var(--draggo-muted);
+    background: transparent;
+    border: 0;
+    border-left: 2px solid var(--draggo-border);
+    opacity: .6;
+    cursor: default;
+}
+.draggo-item-wrap .draggo-wrap-mark { opacity: .6; }
+.draggo-item-wrap .draggo-wrap-label { font-weight: 600; }
+.draggo-item-wrap .draggo-wrap-note { font-style: italic; opacity: .65; }
+
+/* Inline edit form */
+.draggo-edit { width: 100%; }
+.draggo-edit-head { font-weight: 600; font-size: .8rem; margin-bottom: .5rem; }
+.draggo-edit-note { font-size: .74rem; line-height: 1.4; color: var(--draggo-muted); background: var(--draggo-chip); border: 1px solid var(--draggo-border); border-radius: 8px; padding: .55rem .65rem; margin: .25rem 0 .5rem; }
+.draggo-edit-field { display: flex; flex-direction: column; gap: .2rem; margin-bottom: .5rem; font-size: .72rem; }
+.draggo-edit-field span { color: var(--draggo-muted); }
+.draggo-canvas .draggo-edit-field span { color: #6b7280; }
+.draggo-edit-field input,
+.draggo-edit-field textarea {
+    width: 100%;
+    box-sizing: border-box;
+    padding: .35rem .45rem;
+    border: 1px solid var(--draggo-border);
+    border-radius: 4px;
+    font-size: .8rem;
+    font-family: inherit;
+}
+.draggo-edit-field textarea { resize: vertical; font-family: ui-monospace, monospace; }
+.draggo-style-sec { margin-top: 1rem; border-top: 1px solid var(--draggo-border); padding-top: .5rem; }
+.draggo-style-sec h3 { font-size: .8rem; text-transform: uppercase; color: var(--draggo-muted); margin: .25rem 0 .6rem; }
+.draggo-grp { border: 1px solid var(--draggo-border); border-radius: 6px; margin-bottom: .5rem; background: var(--draggo-row-bg); }
+.draggo-grp > summary {
+    cursor: pointer; list-style: none; padding: .5rem .65rem;
+    font-size: .75rem; font-weight: 600; text-transform: uppercase; letter-spacing: .03em;
+    color: var(--draggo-text); user-select: none;
+}
+.draggo-grp > summary::-webkit-details-marker { display: none; }
+.draggo-grp > summary::before { content: '▸'; display: inline-block; margin-right: .4rem; color: var(--draggo-muted); transition: transform .15s; }
+.draggo-grp[open] > summary::before { transform: rotate(90deg); }
+.draggo-grp-body { padding: .25rem .65rem .5rem; border-top: 1px solid var(--draggo-border); }
+.draggo-ins-chk { width: 16px; height: 16px; cursor: pointer; accent-color: var(--draggo-accent); }
+.draggo-edit-bool { flex-direction: row; align-items: center; gap: .5rem; }
+.draggo-edit-bool span { flex: 1; }
+.draggo-edit-bool input { width: auto; flex: 0 0 auto; margin: 0; padding: 0; }
+.draggo-file-pick { border: 1px solid transparent; background: var(--draggo-btn-grad); color: #fff; border-radius: 4px; padding: .3rem .6rem; cursor: pointer; font-size: .78rem; white-space: nowrap; }
+.draggo-file-pick:hover { filter: brightness(1.08); }
+.draggo-file-clr { border: 1px solid var(--draggo-border); background: var(--draggo-chip); color: var(--draggo-text); border-radius: 4px; cursor: pointer; width: 30px; flex: 0 0 auto; }
+.draggo-files { display: flex; flex-direction: column; gap: .4rem; }
+.draggo-files-list { display: flex; flex-wrap: wrap; gap: .3rem; }
+.draggo-file-chip { display: inline-flex; align-items: center; gap: .35rem; background: var(--draggo-chip); border: 1px solid var(--draggo-border); border-radius: 4px; padding: .15rem .25rem .15rem .5rem; font-size: .75rem; }
+.draggo-file-chip button { border: 0; background: none; color: var(--draggo-muted); cursor: pointer; font-size: .8rem; }
+.draggo-files-empty { color: var(--draggo-muted); font-size: .75rem; font-style: italic; }
+.draggo-files .draggo-file-pick { align-self: flex-start; }
+/* File picker modal */
+.draggo-fp { position: fixed; inset: 0; z-index: 10000; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,.6); padding: 2rem; }
+.draggo-fp-box { width: min(820px, 96vw); max-height: 86vh; display: flex; flex-direction: column; background: var(--draggo-bg); color: var(--draggo-text); border: 1px solid var(--draggo-border); border-radius: 10px; box-shadow: 0 20px 60px rgba(0,0,0,.4); overflow: hidden; }
+.draggo-fp-head { display: flex; align-items: center; gap: .75rem; padding: .75rem 1rem; border-bottom: 1px solid var(--draggo-border); }
+.draggo-fp-head strong { margin-right: auto; }
+.draggo-fp-up { border: 1px solid transparent; background: var(--draggo-btn-grad); color: #fff; border-radius: 5px; padding: .35rem .75rem; cursor: pointer; font-size: .8rem; }
+.draggo-fp-up:disabled { opacity: .6; cursor: default; }
+.draggo-fp-nf { border: 1px solid var(--draggo-border); background: var(--draggo-chip); color: var(--draggo-text); border-radius: 5px; padding: .35rem .75rem; cursor: pointer; font-size: .8rem; }
+.draggo-fp-crumb { display: flex; flex-wrap: wrap; align-items: center; gap: .2rem; padding: .55rem 1rem 0; }
+.draggo-fp-cr { border: 0; background: none; color: var(--draggo-accent); cursor: pointer; font-size: .8rem; padding: .1rem .2rem; }
+.draggo-fp-crsep { color: var(--draggo-muted); }
+.draggo-fp-dir .draggo-fp-folder { display: flex; align-items: center; justify-content: center; font-size: 2rem; background: var(--draggo-chip); }
+.draggo-fp-x { border: 0; background: none; color: var(--draggo-muted); font-size: 1.1rem; cursor: pointer; }
+.draggo-fp-search { margin: .65rem 1rem 0; padding: .4rem .6rem; border: 1px solid var(--draggo-border); border-radius: 5px; background: var(--draggo-chip); color: var(--draggo-text); }
+.draggo-fp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: .5rem; padding: 1rem; overflow-y: auto; }
+.draggo-fp-item { display: flex; flex-direction: column; gap: .35rem; padding: .4rem; border: 2px solid var(--draggo-border); border-radius: 8px; background: var(--draggo-row-bg); color: var(--draggo-text); cursor: pointer; text-align: center; }
+.draggo-fp-item.is-sel { border-color: var(--draggo-accent); }
+.draggo-fp-thumb { display: block; width: 100%; height: 80px; border-radius: 5px; background: var(--draggo-chip) center/cover no-repeat; }
+.draggo-fp-ic { display: flex; align-items: center; justify-content: center; font-size: .8rem; font-weight: 700; letter-spacing: .05em; color: var(--draggo-muted); }
+.draggo-fp-name { font-size: .68rem; word-break: break-all; line-height: 1.2; }
+.draggo-fp-empty { grid-column: 1 / -1; text-align: center; color: var(--draggo-muted); padding: 2rem; }
+.draggo-fp-foot { padding: .75rem 1rem; border-top: 1px solid var(--draggo-border); text-align: right; }
+.draggo-fp-ok { border: 1px solid var(--draggo-accent); background: var(--draggo-accent); color: #fff; border-radius: 5px; padding: .4rem .9rem; cursor: pointer; }
+/* Upload progress panel */
+.draggo-fp-grid.is-drop { outline: 2px dashed var(--draggo-accent); outline-offset: -6px; background: color-mix(in srgb, var(--draggo-accent) 8%, transparent); }
+.draggo-fp-prog { margin: .65rem 1rem 0; padding: .65rem .8rem; border: 1px solid var(--draggo-border); border-radius: 8px; background: var(--draggo-chip); }
+.draggo-fp-prog-head { font-size: .78rem; font-weight: 600; margin-bottom: .5rem; }
+.draggo-fp-prog-list { display: flex; flex-direction: column; gap: .4rem; max-height: 30vh; overflow-y: auto; }
+.draggo-fp-prog-row { display: grid; grid-template-columns: minmax(0,1fr) 110px 1.4rem; align-items: center; gap: .6rem; font-size: .72rem; }
+.draggo-fp-prog-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.draggo-fp-prog-bar { height: 6px; border-radius: 4px; background: var(--draggo-border); overflow: hidden; }
+.draggo-fp-prog-fill { display: block; height: 100%; width: 0; background: var(--draggo-accent); transition: width .15s linear; }
+.draggo-fp-prog-st { text-align: right; color: var(--draggo-muted); font-variant-numeric: tabular-nums; }
+.draggo-fp-prog-row.is-ok .draggo-fp-prog-st { color: #16a34a; }
+.draggo-fp-prog-row.is-ok .draggo-fp-prog-fill { background: #16a34a; }
+.draggo-fp-prog-row.is-err .draggo-fp-prog-st { color: #dc2626; cursor: help; }
+.draggo-fp-prog-row.is-err .draggo-fp-prog-fill { background: #dc2626; width: 100%; }
+.draggo-fp-prog-done { margin-top: .6rem; border: 1px solid var(--draggo-accent); background: var(--draggo-accent); color: #fff; border-radius: 5px; padding: .35rem .8rem; cursor: pointer; font-size: .78rem; }
+.draggo-tbl { border: 1px solid var(--draggo-border); border-radius: 6px; padding: .4rem; overflow-x: auto; }
+.draggo-tbl table { border-collapse: collapse; width: 100%; }
+.draggo-tbl td { padding: 1px; }
+.draggo-tbl td input { width: 100%; min-width: 70px; box-sizing: border-box; padding: .2rem .3rem; border: 1px solid var(--draggo-border); border-radius: 3px; background: var(--draggo-chip); color: var(--draggo-text); }
+.draggo-tbl-bar { display: flex; flex-wrap: wrap; gap: .3rem; margin-top: .4rem; }
+.draggo-tbl-bar button, .draggo-pair-add { border: 1px solid var(--draggo-border); background: var(--draggo-chip); color: var(--draggo-text); border-radius: 4px; padding: .2rem .5rem; cursor: pointer; font-size: .75rem; }
+.draggo-pairs { display: flex; flex-direction: column; gap: .35rem; }
+.draggo-pair-row { display: flex; gap: .35rem; align-items: center; }
+.draggo-pair-row input { flex: 1; min-width: 0; }
+.draggo-pair-row button { flex: 0 0 auto; border: 1px solid var(--draggo-border); background: var(--draggo-chip); color: var(--draggo-text); border-radius: 4px; cursor: pointer; width: 28px; height: 28px; }
+.draggo-pair-add { margin-top: .4rem; align-self: flex-start; }
+.draggo-edit-inline { display: flex; flex-wrap: wrap; gap: .35rem; align-items: center; }
+.draggo-edit-inline > * { min-width: 0; }
+.draggo-edit-inline input { flex: 1 1 70px; min-width: 0; }
+.draggo-edit-inline select { flex: 0 1 auto; }
+.draggo-edit-field { box-sizing: border-box; max-width: 100%; }
+.draggo-edit-field input, .draggo-edit-field select, .draggo-edit-field textarea { max-width: 100%; box-sizing: border-box; }
+/* Side panel never scrolls horizontally. */
+.draggo-side { overflow-x: hidden; }
+.draggo-edit-inline input { flex: 1; min-width: 0; }
+.draggo-edit-inline select, .draggo-edit-inline input[type=number] { flex: 0 0 auto; width: auto; }
+
+/* Inline rich-text editor */
+.draggo-rte { border: 1px solid var(--draggo-border); border-radius: 4px; overflow: hidden; background: #fff; color: #1b1f24; }
+.draggo-rte-bar { display: flex; flex-wrap: wrap; gap: 2px; padding: 3px; background: #f3f4f6; border-bottom: 1px solid #e3e6ec; }
+.draggo-rte-btn { border: 1px solid transparent; background: transparent; cursor: pointer; min-width: 24px; height: 24px; border-radius: 3px; font-size: .8rem; color: #1b1f24; }
+.draggo-rte-btn:hover { background: #e5e7eb; }
+.draggo-rte-sel { height: 24px; border: 1px solid #d7dbe0; border-radius: 3px; font-size: .72rem; background: #fff; color: #1b1f24; }
+.draggo-rte-color { width: 26px; height: 24px; border: 1px solid #d7dbe0; border-radius: 3px; padding: 0; cursor: pointer; }
+.draggo-rte-area { min-height: 90px; padding: .5rem; font-family: inherit; font-size: .85rem; outline: none; }
+.draggo-rte-area:focus { box-shadow: inset 0 0 0 2px var(--draggo-accent); }
+
+/* Globals (design tokens) tab */
+.draggo-tok-list { display: flex; flex-direction: column; gap: .3rem; margin: .5rem 0; }
+.draggo-tok { display: flex; align-items: center; gap: .5rem; padding: .35rem .5rem; border: 1px solid var(--draggo-border); border-radius: 6px; font-size: .75rem; }
+.draggo-tok-sw { width: 18px; height: 18px; border-radius: 4px; border: 1px solid var(--draggo-border); flex: 0 0 auto; }
+.draggo-tok-name { font-weight: 600; }
+.draggo-tok-var { color: var(--draggo-muted); font-size: .68rem; }
+.draggo-tok-val { margin-left: auto; color: var(--draggo-muted); }
+.draggo-tok-del { border: 0; background: none; color: #b91c1c; cursor: pointer; }
+.draggo-tok-group { margin-bottom: .75rem; }
+.draggo-tok-group h3 { font-size: .72rem; text-transform: uppercase; letter-spacing: .03em; color: var(--draggo-muted); margin: .5rem 0 .3rem; }
+.draggo-tok-form { display: flex; flex-direction: column; gap: .5rem; margin-top: 1rem; padding: .75rem; border: 1px solid var(--draggo-border); border-radius: 8px; background: var(--draggo-row-bg); }
+.draggo-tok-form h3 { margin: 0 0 .25rem; font-size: .85rem; }
+.draggo-tok-field { display: flex; flex-direction: column; gap: .2rem; font-size: .78rem; }
+.draggo-tok-field > span { color: var(--draggo-muted); }
+.draggo-tok-field input, .draggo-tok-field select, .draggo-tok-valhost input { width: 100%; box-sizing: border-box; padding: .35rem .5rem; border: 1px solid var(--draggo-border); border-radius: 5px; background: var(--draggo-chip); color: var(--draggo-text); }
+.draggo-tok-valhost input[type=color] { height: 34px; padding: 2px; cursor: pointer; }
+.draggo-tok-form .draggo-file-pick { align-self: flex-start; margin-top: .25rem; }
+.draggo-tok-pick { max-width: 90px; }
+.draggo-bp-switch { display: flex; gap: .25rem; margin: .75rem 0 .25rem; }
+.draggo-bp-switch button { flex: 1; border: 1px solid var(--draggo-border); background: var(--draggo-chip); color: var(--draggo-text); border-radius: 5px; padding: .3rem .2rem; cursor: pointer; font-size: .72rem; }
+.draggo-bp-switch button.is-on { border-color: transparent; color: #fff; background: var(--draggo-btn-grad); }
+.draggo-bp-hint { font-size: .68rem; color: var(--draggo-muted); margin: 0 0 .5rem; }
+.draggo-edit-actions { display: flex; gap: .4rem; }
+.draggo-edit-save {
+    border: 1px solid var(--draggo-accent); background: var(--draggo-accent); color: #fff;
+    border-radius: 4px; padding: .35rem .8rem; cursor: pointer; font-size: .78rem;
+}
+.draggo-edit-cancel {
+    border: 1px solid var(--draggo-border); background: transparent; color: inherit;
+    border-radius: 4px; padding: .35rem .8rem; cursor: pointer; font-size: .78rem;
+}
+
+/* ── Canvas = real page look (always light, never dark-mode) ─────── */
+.draggo-canvas-wrap { flex: 1; overflow: auto; }
+.draggo-canvas {
+    background: #ffffff;
+    color: #1b1f24;
+    margin: 0 auto;
+    position: relative; /* anchor for the sticky-header overlay preview */
+    transition: max-width .2s, box-shadow .2s;
+}
+.draggo-canvas[data-vw="tablet"] { max-width: 768px; box-shadow: 0 0 0 1px #d7dbe0, 0 10px 40px rgba(0,0,0,.25); }
+.draggo-canvas[data-vw="mobile"] { max-width: 390px; box-shadow: 0 0 0 1px #d7dbe0, 0 10px 40px rgba(0,0,0,.25); }
+.draggo-main { display: flex; flex-direction: column; min-height: 0; }
+.draggo-toolbar { display: flex; align-items: center; gap: .5rem; }
+/* Read-only header/footer unit preview in the page editor. */
+.draggo-frame { position: relative; opacity: .96; }
+.draggo-frame--header { border-bottom: 2px dashed var(--draggo-accent); }
+/* Sticky header preview: OVERLAYS the first element (like FE position:fixed) —
+   out of flow, transparent, click-through so the content behind stays editable. */
+.draggo-frame--header.is-sticky { position: absolute; top: 0; left: 0; right: 0; z-index: 200; background: transparent; pointer-events: none; }
+.draggo-frame--header.is-sticky .draggo-frame-tag { pointer-events: auto; }
+.draggo-frame--footer { border-top: 2px dashed var(--draggo-accent); }
+.draggo-frame-tag { position: absolute; top: 0; right: 0; z-index: 90; background: var(--draggo-accent); color: #fff; font-size: .6rem; padding: .1rem .4rem; border-radius: 0 0 0 4px; pointer-events: none; }
+.draggo-frame-body { pointer-events: none; }
+/* Viewport switch = one segmented control (shared border, inner separators). */
+.draggo-vp { display: inline-flex; margin-left: auto; border: 1px solid var(--draggo-border); border-radius: 7px; overflow: hidden; background: var(--draggo-chip); }
+.draggo-vp button { border: 0; border-right: 1px solid var(--draggo-border); background: transparent; color: var(--draggo-text); border-radius: 0; padding: .42rem .62rem; cursor: pointer; font-size: .9rem; line-height: 1.1; }
+.draggo-vp button:last-child { border-right: 0; }
+.draggo-vp button:hover { background: var(--draggo-panel-2); }
+.draggo-vp button.is-on { background: var(--draggo-btn-grad); color: #fff; }
+/* Current-viewport badge — makes the active view unmistakable. */
+/* Active-viewport status badge — neutral chip (not a button), same height. */
+.draggo-vp-label { display: inline-flex; align-items: center; padding: .42rem .62rem; border: 1px solid var(--draggo-border); border-radius: 7px; font-size: .72rem; font-weight: 600; letter-spacing: .02em; background: var(--draggo-panel-2); color: var(--draggo-muted); line-height: 1.1; }
+/* Inspector breakpoint switcher: full-width FA buttons. */
+.draggo-ins-bp button { display: inline-flex; align-items: center; justify-content: center; gap: .35rem; }
+.draggo-ins-bp .draggo-fa { font-size: .8em; }
+/* Toolbar tool buttons (Tree / AI) — sit right after the viewport buttons. */
+.draggo-tools { display: inline-flex; gap: .4rem; }
+.draggo-tools button { white-space: nowrap; }
+.draggo-tools button.is-on { border-color: transparent; background: var(--draggo-btn-grad); color: #fff; }
+.draggo-canvas .draggo-section { background: #ffffff; border-color: #e3e6ec; }
+.draggo-canvas .draggo-section-head { background: #f5f6f8; color: #1b1f24; border-bottom-color: #e3e6ec; }
+.draggo-canvas .draggo-section-col { color: #6b7280; border-color: #d7dbe0; }
+.draggo-canvas .draggo-row { border: 2px solid #b8c2d6; }
+.draggo-canvas .draggo-row-head { background: #eef3ff; color: #4b5563; border-bottom-color: #e3e6ec; }
+.draggo-canvas .draggo-col { background: transparent; border-color: #cfd6e4; }
+.draggo-canvas .draggo-col-label,
+.draggo-canvas .draggo-col-hint { color: #9aa3b2; }
+.draggo-canvas .draggo-item { color: #1b1f24; }
+.draggo-canvas .draggo-insert-btn { color: #9aa3b2; border-color: #d7dbe0; }
+.draggo-canvas .draggo-insert-btn:hover { color: var(--draggo-accent); border-color: var(--draggo-accent); }
+
+/* ════════════════════════════════════════════════════════════════
+   Elementor-style canvas: structure chrome is INVISIBLE until you
+   hover the part, then shows as a thin dashed outline + a small
+   floating pill. The page reads exactly like the live frontend.
+   ════════════════════════════════════════════════════════════════ */
+
+/* No boxes/borders on the structure by default. Background is NOT forced —
+   inline preview backgrounds (column/row/container bg) must stay visible. */
+.draggo-canvas .draggo-section,
+.draggo-canvas .draggo-row,
+.draggo-canvas .draggo-col {
+    border: 0 !important;
+    border-radius: 0 !important;
+}
+/* Overlays must never be clipped or hidden behind neighbouring elements. */
+.draggo-canvas,
+.draggo-section, .draggo-section-body, .draggo-section-inner,
+.draggo-row, .draggo-cols, .draggo-col, .draggo-col-list,
+.draggo-item { overflow: visible; }
+/* Rows are pure structure — never a background of their own. */
+.draggo-canvas .draggo-row, .draggo-canvas .draggo-cols { background: transparent !important; }
+/* Element + its live preview are transparent unless the element itself sets a bg. */
+.draggo-canvas .draggo-item, .draggo-canvas .draggo-item-preview { background: transparent !important; }
+.draggo-section { position: relative; }
+.draggo-row { position: relative; }
+.draggo-col { position: relative; }
+
+/* Hover → thin dashed outline (section strongest, column faintest). */
+.draggo-canvas .draggo-section:hover { outline: 1px dashed var(--draggo-accent); outline-offset: -1px; }
+.draggo-canvas .draggo-row:hover { outline: 2px solid rgba(99,102,241,.75); outline-offset: -2px; }
+.draggo-canvas .draggo-col:hover { outline: 1px dashed rgba(99,102,241,.35); outline-offset: -3px; }
+
+/* Container handle → floating pill, top-LEFT, hover-only. (Top-left, not
+   top-center, so it never overlaps the row handle — which is top-center — when
+   a row is the container's first child. Rudra bug #1.) */
+.draggo-section-head {
+    position: absolute !important;
+    /* Per-level header placement so nested headers never overlap (and the level
+       is readable at a glance): container = right, row = centre, column = left. */
+    top: 0; left: auto; right: 12px;
+    transform: translateY(-50%);
+    width: auto !important;
+    display: inline-flex; align-items: center; gap: .4rem;
+    padding: .12rem .55rem !important;
+    background: var(--draggo-accent) !important;
+    color: #fff !important;
+    border: 0 !important;
+    border-radius: 6px;
+    font-size: .68rem; white-space: nowrap;
+    opacity: 0; pointer-events: none; transition: opacity .1s;
+    z-index: 140;
+    box-shadow: 0 2px 8px rgba(0,0,0,.25);
+}
+.draggo-section:hover > .draggo-section-head { opacity: 1; pointer-events: auto; }
+.draggo-section-head .draggo-section-title { color: #fff; font-weight: 600; }
+.draggo-section-head .draggo-section-col { color: #fff !important; border: 0 !important; opacity: .8; font-size: .6rem; }
+.draggo-section-head .draggo-section-grip { color: #fff; }
+.draggo-section-head .draggo-section-op { color: #fff; margin-left: .25rem !important; }
+
+/* Row handle → floating pill, top-center, hover-only. */
+.draggo-row-head {
+    position: absolute !important;
+    top: 0; left: 50%;
+    transform: translate(-50%, -50%);
+    display: inline-flex; align-items: center; gap: .5rem;
+    padding: .1rem .5rem !important;
+    background: #4f46e5 !important;
+    color: #fff !important;
+    border: 0 !important;
+    border-radius: 6px;
+    font-size: .64rem; white-space: nowrap;
+    opacity: 0; pointer-events: none; transition: opacity .1s;
+    z-index: 130;
+    box-shadow: 0 2px 8px rgba(0,0,0,.25);
+}
+.draggo-row:hover > .draggo-row-head { opacity: 1; pointer-events: auto; }
+.draggo-row-head span { color: #fff; }
+.draggo-row-del { color: #fff !important; background: rgba(0,0,0,.2) !important; border: 0 !important; border-radius: 3px; padding: 0 .35rem !important; cursor: pointer; }
+
+/* Column tag → tiny corner label, hover-only. */
+.draggo-col-label {
+    position: absolute !important;
+    top: 0; left: 0;
+    background: rgba(79,70,229,.85) !important;
+    color: #fff !important;
+    font-size: .58rem;
+    padding: .05rem .3rem !important;
+    border-radius: 0 0 4px 0;
+    opacity: 0; pointer-events: none; transition: opacity .1s;
+    z-index: 120;
+}
+.draggo-col:hover > .draggo-col-label { opacity: 1; }
+
+/* "+ Element" hint only while hovering the column. */
+.draggo-col-hint { opacity: 0; transition: opacity .1s; }
+.draggo-col:hover > .draggo-col-hint { opacity: .8; }
+
+/* Insert bars stay subtle until hovered. */
+.draggo-insert { opacity: .25; transition: opacity .12s; }
+.draggo-insert:hover { opacity: 1; }
+
+/* Element toolbar → centered floating pill (Elementor look). */
+.draggo-item-bar {
+    left: 50%;
+    transform: translate(-50%, -50%);
+    border-radius: 6px;
+    box-shadow: 0 2px 8px rgba(0,0,0,.3);
+}
+
+/* Multi-select (member groups for protected content). */
+.draggo-mselect {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    max-height: 180px;
+    overflow-y: auto;
+    padding: 6px 8px;
+    border: 1px solid var(--bld-edit-border, #2a2f3a);
+    border-radius: 6px;
+}
+.draggo-mselect-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-size: 13px;
+}
+/* Keep the checkbox at its intrinsic size: a broad `input{width:100%}` rule in
+   the edit pane otherwise stretches it to the full row width (≈200px), shoving
+   the label aside — the "checkbox alignment is off" bug. */
+.draggo-mselect-row input { margin: 0; flex: 0 0 auto; width: auto; }
+.draggo-mselect-row input[type="checkbox"] { width: 16px; height: 16px; }
+.draggo-mselect-row span { flex: 1 1 auto; }
+
+/* Dynamic-tag picker (Tier 3): inline ⚡ button + floating menu. */
+.draggo-dyntag-host { position: relative; align-items: center; }
+.draggo-dyntag {
+    flex: 0 0 auto;
+    width: 30px; height: 30px;
+    border: 1px solid var(--bld-edit-border, #2a2f3a);
+    border-radius: 6px;
+    background: #1b2029;
+    color: #ffcf5c;
+    cursor: pointer;
+    font-size: 14px;
+    line-height: 1;
+}
+.draggo-dyntag:hover { background: #232a36; }
+.draggo-dyntag-menu {
+    position: absolute;
+    top: 100%; right: 0;
+    z-index: 50;
+    margin-top: 4px;
+    width: 260px;
+    max-height: 320px;
+    overflow-y: auto;
+    background: #11151c;
+    border: 1px solid var(--bld-edit-border, #2a2f3a);
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(0,0,0,.45);
+    padding: 4px;
+}
+.draggo-dyntag-grp {
+    padding: 6px 8px 2px;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    color: #6b7686;
+}
+.draggo-dyntag-it {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    width: 100%;
+    text-align: left;
+    border: 0;
+    background: transparent;
+    color: #d6dbe4;
+    padding: 5px 8px;
+    border-radius: 5px;
+    cursor: pointer;
+}
+.draggo-dyntag-it:hover { background: #1d2530; }
+.draggo-dyntag-it code { font-size: 11px; color: #7f8a9b; }
+
+/* Icon picker (Tier 1). */
+.draggo-iconpick-prev { display:inline-flex; align-items:center; justify-content:center; width:34px; height:34px; border:1px solid var(--bld-edit-border,#2a2f3a); border-radius:6px; color:#d6dbe4; }
+.draggo-iconpick-prev svg { width:20px; height:20px; }
+.draggo-iconpick-none { color:#6b7686; }
+.draggo-iconmodal { position:fixed; inset:0; z-index:9999; background:rgba(0,0,0,.55); display:flex; align-items:center; justify-content:center; }
+.draggo-iconmodal-box { width:min(560px,92vw); max-height:80vh; display:flex; flex-direction:column; background:#11151c; border:1px solid var(--bld-edit-border,#2a2f3a); border-radius:10px; overflow:hidden; }
+.draggo-iconmodal-head { display:flex; gap:8px; padding:10px; border-bottom:1px solid var(--bld-edit-border,#2a2f3a); }
+.draggo-iconmodal-search { flex:1; padding:6px 10px; background:#1b2029; border:1px solid var(--bld-edit-border,#2a2f3a); border-radius:6px; color:#fff; }
+.draggo-iconmodal-x { width:34px; border:0; background:#1b2029; color:#fff; border-radius:6px; cursor:pointer; }
+.draggo-iconmodal-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(92px,1fr)); gap:6px; padding:10px; overflow-y:auto; }
+.draggo-iconmodal-it { display:flex; flex-direction:column; align-items:center; gap:4px; padding:10px 4px; background:#171c25; border:1px solid transparent; border-radius:8px; color:#d6dbe4; cursor:pointer; font-size:11px; }
+.draggo-iconmodal-it:hover { background:#1d2530; }
+.draggo-iconmodal-it.is-on { border-color:#3b82f6; }
+.draggo-iconmodal-it svg { width:24px; height:24px; }
+.draggo-iconmodal-it span { opacity:.7; text-align:center; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:84px; }
+
+/* Copy/Paste/Duplicate — toolbar buttons share the bar-button look. */
+.draggo-item-dup, .draggo-item-copy, .draggo-item-paste { background: none; border: 0; cursor: pointer; color: inherit; font-size: 13px; line-height: 1; padding: 2px 4px; opacity: .8; }
+.draggo-item-dup:hover, .draggo-item-copy:hover, .draggo-item-paste:hover { opacity: 1; }
+/* Paste-below is shown only while an element sits on the clipboard. */
+.draggo-item-paste { display: none; color: #7c3aed; }
+body.draggo-has-clip .draggo-item-paste { display: inline-flex; }
+
+/* Right-click context menu. */
+.draggo-ctxmenu { position: fixed; z-index: 10000; min-width: 180px; background: #11151c; border: 1px solid var(--bld-edit-border, #2a2f3a); border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,.5); padding: 4px; }
+.draggo-ctxmenu button { display: block; width: 100%; text-align: left; background: none; border: 0; color: #d6dbe4; padding: 7px 12px; border-radius: 5px; cursor: pointer; font-size: 13px; }
+.draggo-ctxmenu button:hover:not(:disabled) { background: #1d2530; }
+.draggo-ctxmenu button:disabled { opacity: .35; cursor: default; }
+
+/* Transient toast. */
+.draggo-toast { position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%); z-index: 10001; background: #1d2530; color: #fff; padding: 8px 16px; border-radius: 8px; box-shadow: 0 6px 20px rgba(0,0,0,.4); font-size: 13px; transition: opacity .4s, transform .4s; }
+.draggo-toast.is-out { opacity: 0; transform: translateX(-50%) translateY(10px); }
+
+/* Component library (Tier 4). */
+.draggo-components { display: flex; flex-direction: column; gap: 4px; }
+.draggo-comp-item { display: flex; align-items: stretch; gap: 4px; }
+.draggo-comp-ins { flex: 1; display: flex; align-items: center; gap: 8px; text-align: left; background: #171c25; border: 1px solid var(--bld-edit-border, #2a2f3a); border-radius: 6px; color: #d6dbe4; padding: 6px 8px; cursor: pointer; }
+.draggo-comp-ins:hover { background: #1d2530; }
+.draggo-comp-ins .draggo-pi-icon { flex: 0 0 auto; opacity: .8; }
+.draggo-comp-ins .draggo-pi-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.draggo-comp-del { flex: 0 0 auto; width: 28px; border: 1px solid var(--bld-edit-border, #2a2f3a); border-radius: 6px; background: #1b2029; color: #b91c1c; cursor: pointer; }
+.draggo-comp-del:hover { background: #2a1416; }
+
+/* Save whole section as component (row head). */
+.draggo-row-save { margin-left: auto; margin-right: 6px; background: #1b2029; border: 1px solid var(--bld-edit-border, #2a2f3a); color: #9ec5fe; border-radius: 5px; padding: 2px 8px; font-size: 12px; cursor: pointer; }
+.draggo-row-save:hover { background: #232a36; }
+
+/* Font Awesome in the icon picker. */
+.draggo-iconpick-prev i { font-size: 20px; }
+.draggo-iconmodal-tabs { display: flex; gap: 4px; padding: 0 10px 8px; }
+.draggo-iconmodal-tabs button { flex: 1; background: #1b2029; border: 1px solid var(--bld-edit-border, #2a2f3a); color: #cbd5e1; border-radius: 6px; padding: 5px 8px; cursor: pointer; font-size: 12px; }
+.draggo-iconmodal-tabs button.is-on { background: #3b82f6; color: #fff; border-color: #3b82f6; }
+.draggo-iconmodal-it i { font-size: 24px; }
+
+/* Icon-pair rows (Social-Icons: icon picker + URL). */
+.draggo-iconpair-row { display: flex; align-items: center; gap: 6px; }
+.draggo-iconpair-ico { flex: 0 0 auto; cursor: pointer; background: #1b2029; }
+.draggo-iconpair-ico:hover { border-color: #3b82f6; }
+.draggo-iconpair-ico i { font-size: 18px; }
+.draggo-iconpair-row input { flex: 1; }
+
+/* Palette: sub-tabs + search + category accordions. */
+.draggo-subtabs { display: flex; gap: 4px; margin-bottom: 10px; }
+.draggo-subtabs button { flex: 1; background: var(--draggo-chip); border: 1px solid var(--draggo-border); color: var(--draggo-muted); border-radius: 6px; padding: 6px 4px; cursor: pointer; font-size: 12px; font-weight: 600; }
+.draggo-subtabs button.is-on { background: var(--draggo-btn-grad); border-color: transparent; color: #fff; }
+.draggo-pal-search { width: 100%; box-sizing: border-box; padding: 7px 10px; margin-bottom: 8px; background: var(--draggo-chip); border: 1px solid var(--draggo-border); border-radius: 6px; color: var(--draggo-text); }
+.draggo-cat { border: 1px solid var(--draggo-border); border-radius: 6px; margin-bottom: 6px; overflow: hidden; }
+.draggo-cat > summary { cursor: pointer; padding: 8px 10px; font-weight: 600; font-size: 13px; list-style: none; display: flex; align-items: center; justify-content: space-between; background: var(--draggo-panel-2); color: var(--draggo-text); }
+.draggo-cat > summary::-webkit-details-marker { display: none; }
+.draggo-cat[open] > summary { border-bottom: 1px solid var(--draggo-border); }
+.draggo-cat-n { opacity: .5; font-weight: 400; font-size: 11px; }
+.draggo-cat .draggo-elements { padding: 6px; }
+
+/* Element editor tabs: Inhalt / Stil / Erweitert. */
+.draggo-etabs { display: flex; gap: 4px; margin: 0 0 10px; }
+.draggo-etabs button { flex: 1; padding: 7px 4px; border: 1px solid var(--draggo-border); background: var(--draggo-chip); color: var(--draggo-muted); border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 600; }
+.draggo-etabs button.is-on { background: var(--draggo-btn-grad); border-color: transparent; color: #fff; }
+
+/* Themed scrollbar in the left sidebar (matches the UI). */
+.draggo-side { scrollbar-width: thin; scrollbar-color: var(--draggo-border) var(--draggo-panel-2); }
+.draggo-side::-webkit-scrollbar { width: 10px; }
+.draggo-side::-webkit-scrollbar-track { background: var(--draggo-panel-2); }
+.draggo-side::-webkit-scrollbar-thumb { background: var(--draggo-border); border-radius: 6px; border: 2px solid var(--draggo-panel-2); }
+.draggo-side::-webkit-scrollbar-thumb:hover { background: var(--draggo-accent); }
+
+/* Accordion/Tabs item repeater: each entry is a collapsible editor block. */
+.draggo-accitems { display: flex; flex-direction: column; gap: 6px; }
+.draggo-accitem { border: 1px solid var(--draggo-border); border-radius: 6px; overflow: hidden; }
+.draggo-accitem > summary { cursor: pointer; padding: 7px 10px; font-weight: 600; font-size: .78rem; background: var(--draggo-panel-2); color: var(--draggo-text); list-style: none; }
+.draggo-accitem > summary::-webkit-details-marker { display: none; }
+.draggo-accitem-body { padding: 8px; display: flex; flex-direction: column; gap: 6px; }
+.draggo-accitem-title { width: 100%; }
+.draggo-accitem-del { align-self: flex-start; background: var(--draggo-chip); border: 1px solid var(--draggo-border); color: #b91c1c; border-radius: 4px; padding: 3px 8px; cursor: pointer; font-size: .72rem; }
+
+/* ── Landing (.draggo-lp) sections as CONTAINED blocks in the editor canvas ──
+   The editor renders the real FE markup of draggo_lp_* elements inside a chip.
+   draggo-landing.css is now loaded, but several of its rules assume the page
+   <body> + the landing JS. All overrides below are .draggo-canvas-scoped, so
+   the real frontend is never touched. Mirrors LayoutStyleCompiler::previewCss. */
+/* Match the real frontend (body:has(.draggo-lp){background:#E9ECF3;color:#334155}).
+   Each LP section is its own chip wrapped in .draggo-lp, but only the chrome
+   section carries the light .bg layer — so give every chip the same light base
+   instead of the legacy dark one, or non-chrome sections render dark. */
+.draggo-canvas .draggo-lp { background: #E9ECF3; color: #334155; position: relative; overflow: hidden; border-radius: 8px; }
+/* Fixed/sticky backdrops + nav must stay inside the chip, not overlay the toolbar. */
+.draggo-canvas .draggo-lp .bg,
+.draggo-canvas .draggo-lp .noise,
+.draggo-canvas .draggo-lp .nav,
+.draggo-canvas .draggo-lp .mobile-menu { position: absolute !important; }
+/* The "build" scrollytelling section assumes 560vh of body scroll + sticky
+   100vh stage — collapse it to one self-contained stage in the canvas. */
+.draggo-canvas .draggo-lp .build-track { height: auto !important; }
+.draggo-canvas .draggo-lp .build-stage { position: relative !important; top: auto !important; height: auto !important; min-height: 0 !important; overflow: visible !important; }
+/* draggo-landing.js is NOT loaded in the canvas, so JS-gated reveal elements
+   (opacity:0 until a .in class is added) would render invisible across ~9
+   sections. Force their final revealed state (mirrors the reduced-motion CSS). */
+.draggo-canvas .draggo-lp .reveal,
+.draggo-canvas .draggo-lp .build-visual .blk,
+.draggo-canvas .draggo-lp .build-visual .device-toggle,
+.draggo-canvas .draggo-lp .canvas-device { opacity: 1 !important; transform: none !important; visibility: visible !important; }
+
+/* ── Scrollytelling elements: contained, final-state preview in the canvas ──
+   draggo-scroll.js is not loaded in the editor, so neutralize pin/sticky/tall
+   tracks and show the revealed end state. All .draggo-canvas-scoped → FE intact. */
+.draggo-canvas .draggo-ss-card { position: relative !important; top: auto !important; transform: none !important; filter: none !important; min-height: 0 !important; }
+.draggo-canvas .draggo-hp { height: auto !important; }
+.draggo-canvas .draggo-hp-stage { position: relative !important; height: auto !important; overflow-x: auto !important; }
+.draggo-canvas .draggo-hp-panel { opacity: 1 !important; }
+.draggo-canvas .draggo-sp-visuals { position: relative !important; height: auto !important; }
+.draggo-canvas .draggo-sp-visual { position: relative !important; opacity: 1 !important; }
+.draggo-canvas .draggo-sp-step { min-height: 0 !important; opacity: 1 !important; }
+.draggo-canvas .draggo-th-w { color: inherit !important; }
+.draggo-canvas .draggo-px-layer { transform: none !important; }
+.draggo-canvas .draggo-zm-frame { transform: none !important; border-radius: 12px !important; }
+.draggo-canvas .draggo-tl-fill { height: 100% !important; }
+.draggo-canvas .draggo-tl-step { opacity: 1 !important; }
+.draggo-canvas .draggo-tl-step::before { background: var(--tl-accent, #4d49ee) !important; }
+.draggo-canvas [data-draggo-scroll="reveal"] { opacity: 1 !important; transform: none !important; }
+
+/* Scrollytelling Wave 2 — contained, final-state preview in the canvas. */
+.draggo-canvas .draggo-rg-item { opacity: 1 !important; transform: none !important; }
+.draggo-canvas .draggo-tilt-card { opacity: 1 !important; transform: none !important; }
+.draggo-canvas .draggo-sd-path { stroke-dashoffset: 0 !important; }
+.draggo-canvas .draggo-ct-panel { position: relative !important; min-height: 260px !important; }
+/* Static form preview in the canvas (getForm() can't run in a backend request).
+   Non-interactive; uses the real .draggo-form layout + draggo-fw-* widths. */
+.draggo-canvas .draggo-form--preview input,
+.draggo-canvas .draggo-form--preview textarea,
+.draggo-canvas .draggo-form--preview select,
+.draggo-canvas .draggo-form--preview button { pointer-events: none; }
+/* The preview submit is type=submit + disabled (inert) — keep it looking enabled
+   so the canvas shows the real button colour, not a greyed UA-disabled state. */
+.draggo-canvas .draggo-form--preview button[type=submit] { opacity: 1; cursor: default; }
+.draggo-canvas .draggo-form--preview fieldset { border: 0; padding: 0; margin: 0; }
+.draggo-canvas .draggo-form--preview legend { font-weight: 600; font-size: .9rem; padding: 0 0 .35rem; }
+.draggo-canvas .draggo-form-prev-hidden { font-size: .8rem; opacity: .55; font-style: italic; }
+
+/* Progress is a position:fixed reading bar on the FE; in the canvas show it as
+   a static in-flow bar (absolute → 0-height, unclickable chip). */
+.draggo-canvas .draggo-pr { position: relative !important; height: 6px !important; border-radius: 3px; background: rgba(127,127,127,.2) !important; }
+.draggo-canvas .draggo-pr-fill { width: 45% !important; }
+
+/* ── Hilfe / Doku panel ──────────────────────────────────────────────── */
+.draggo-help { display: flex; flex-direction: column; height: 100%; gap: .6rem; }
+.draggo-help-search { padding: .5rem .65rem; border: 1px solid var(--draggo-border); border-radius: 7px; background: var(--draggo-chip); color: var(--draggo-text); font-size: .85rem; }
+.draggo-help-docs { flex: 1 1 40%; overflow-y: auto; min-height: 80px; }
+.draggo-help-empty { color: var(--draggo-muted); font-size: .8rem; padding: .5rem; }
+.draggo-help-sec { border: 1px solid var(--draggo-border); border-radius: 7px; margin-bottom: .4rem; background: var(--draggo-panel-2); }
+.draggo-help-sec > summary { cursor: pointer; padding: .5rem .6rem; font-size: .82rem; font-weight: 600; list-style: none; }
+.draggo-help-sec > summary::-webkit-details-marker { display: none; }
+.draggo-help-cat { display: inline-block; font-size: .62rem; text-transform: uppercase; letter-spacing: .04em; color: var(--draggo-muted); margin-right: .5rem; }
+.draggo-help-body { padding: 0 .6rem .6rem; font-size: .8rem; line-height: 1.5; color: var(--draggo-text); }
+.draggo-help-chat { display: flex; flex-direction: column; flex: 1 1 55%; min-height: 160px; border-top: 1px solid var(--draggo-border); padding-top: .5rem; }
+.draggo-help-log { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: .5rem; padding: .25rem; }
+.draggo-help-msg { padding: .5rem .65rem; border-radius: 9px; font-size: .82rem; line-height: 1.5; max-width: 92%; white-space: normal; }
+.draggo-help-user { align-self: flex-end; background: var(--draggo-accent); color: #fff; }
+.draggo-help-bot { align-self: flex-start; background: var(--draggo-panel-2); border: 1px solid var(--draggo-border); color: var(--draggo-text); }
+.draggo-help-err { align-self: flex-start; background: rgba(220,38,38,.1); color: #dc2626; border: 1px solid rgba(220,38,38,.35); }
+.draggo-help-typing { opacity: .6; }
+.draggo-help-src { margin-top: .4rem; font-size: .68rem; color: var(--draggo-muted); border-top: 1px dashed var(--draggo-border); padding-top: .3rem; }
+.draggo-help-ask { display: flex; gap: .4rem; margin-top: .5rem; }
+.draggo-help-q { flex: 1; resize: vertical; padding: .5rem .6rem; border: 1px solid var(--draggo-border); border-radius: 7px; background: var(--draggo-chip); color: var(--draggo-text); font-size: .82rem; }
+.draggo-help-send { border: 1px solid var(--draggo-accent); background: var(--draggo-accent); color: #fff; border-radius: 7px; padding: 0 .9rem; cursor: pointer; font-size: .82rem; font-weight: 600; white-space: nowrap; }
+.draggo-help-send:disabled { opacity: .5; cursor: default; }
+
+/* ── Visual form builder (Draggo form element) ─────────────────────── */
+.draggo-fb { margin-top: .9rem; border-top: 1px dashed var(--draggo-border); padding-top: .7rem; }
+.draggo-fb-h { font-size: .72rem; text-transform: uppercase; letter-spacing: .04em; color: var(--draggo-muted); margin: 1rem 0 .45rem; }
+.draggo-fb-h:first-of-type { margin-top: 0; }
+.draggo-fb-empty { font-size: .82rem; color: var(--draggo-muted); margin: .2rem 0; }
+.draggo-fb-new { margin-top: .4rem; border: 1px solid var(--draggo-accent); background: transparent; color: var(--draggo-accent); border-radius: 7px; padding: .3rem .7rem; cursor: pointer; font-size: .78rem; font-weight: 600; }
+.draggo-fb-new:hover { background: var(--draggo-accent); color: #fff; }
+
+.draggo-fb-list { display: flex; flex-direction: column; gap: .5rem; }
+.draggo-fb-field { border: 1px solid var(--draggo-border); border-radius: 9px; background: var(--draggo-chip); overflow: hidden; }
+.draggo-fb-field-head { display: flex; align-items: center; justify-content: space-between; gap: .5rem; padding: .4rem .55rem; background: rgba(127,127,127,.07); border-bottom: 1px solid var(--draggo-border); cursor: pointer; user-select: none; }
+.draggo-fb-field-head:hover { background: rgba(127,127,127,.12); }
+.draggo-fb-field.is-collapsed .draggo-fb-field-head { border-bottom-color: transparent; }
+.draggo-fb-field.is-collapsed .draggo-fb-field-body { display: none; }
+.draggo-fb-caret { flex: 0 0 auto; width: 12px; text-align: center; opacity: .6; font-size: .7rem; }
+.draggo-fb-badge { display: flex; align-items: baseline; gap: .4rem; min-width: 0; flex: 1; }
+.draggo-fb-kind { font-size: .74rem; font-weight: 700; color: var(--draggo-text); flex: 0 0 auto; }
+.draggo-fb-sum { font-size: .72rem; color: var(--draggo-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.draggo-fb-tools { display: flex; gap: .25rem; }
+.draggo-fb-tools button { width: 26px; height: 26px; border: 1px solid var(--draggo-border); background: var(--draggo-bg); color: var(--draggo-text); border-radius: 6px; cursor: pointer; font-size: .85rem; line-height: 1; }
+.draggo-fb-tools button:hover:not(:disabled) { border-color: var(--draggo-accent); color: var(--draggo-accent); }
+.draggo-fb-tools button:disabled { opacity: .35; cursor: default; }
+.draggo-fb-del:hover:not(:disabled) { border-color: #e5484d !important; color: #e5484d !important; }
+.draggo-fb-field-body { padding: .55rem; display: flex; flex-direction: column; gap: .45rem; }
+
+.draggo-fb-row { display: flex; flex-direction: column; gap: .2rem; font-size: .78rem; }
+.draggo-fb-row > span { color: var(--draggo-muted); }
+.draggo-fb-row input[type=text], .draggo-fb-row textarea { padding: .4rem .55rem; border: 1px solid var(--draggo-border); border-radius: 7px; background: var(--draggo-bg); color: var(--draggo-text); font-size: .82rem; width: 100%; box-sizing: border-box; }
+.draggo-fb-row textarea { resize: vertical; }
+.draggo-fb-bool { flex-direction: row; align-items: center; gap: .45rem; }
+.draggo-fb-bool input { margin: 0; }
+
+.draggo-fb-palette { display: flex; flex-wrap: wrap; gap: .35rem; }
+.draggo-fb-add { border: 1px solid var(--draggo-border); background: var(--draggo-chip); color: var(--draggo-text); border-radius: 7px; padding: .35rem .6rem; cursor: pointer; font-size: .76rem; }
+.draggo-fb-add:hover { border-color: var(--draggo-accent); color: var(--draggo-accent); }
+.draggo-fb-meta { display: flex; flex-direction: column; gap: .5rem; }
+
+/* Form builder: 2-field options repeater + length row */
+.draggo-fb-opts-lbl { display: block; font-size: .78rem; color: var(--draggo-muted); margin: .3rem 0 .2rem; }
+.draggo-fb-opts { display: flex; flex-direction: column; gap: .3rem; }
+.draggo-fb-opt { display: flex; gap: .3rem; align-items: center; }
+.draggo-fb-opt input { flex: 1; padding: .35rem .5rem; border: 1px solid var(--draggo-border); border-radius: 6px; background: var(--draggo-bg); color: var(--draggo-text); font-size: .8rem; min-width: 0; }
+.draggo-fb-opt button { flex: 0 0 auto; width: 26px; height: 26px; border: 1px solid var(--draggo-border); background: var(--draggo-bg); color: var(--draggo-text); border-radius: 6px; cursor: pointer; }
+.draggo-fb-opt button:hover { border-color: #e5484d; color: #e5484d; }
+.draggo-fb-optadd { margin-top: .3rem; border: 1px dashed var(--draggo-border); background: transparent; color: var(--draggo-accent); border-radius: 7px; padding: .3rem .7rem; cursor: pointer; font-size: .78rem; }
+.draggo-fb-row2 { display: flex; gap: .5rem; }
+.draggo-fb-row2 > .draggo-fb-row { flex: 1; }
+
+.draggo-ins-hint { margin: .15rem 0 .4rem; font-size: .72rem; color: var(--draggo-muted); line-height: 1.4; }
+
+/* ── Open-Now weekly-hours editor widget ───────────────────────────── */
+.draggo-hours{display:flex;flex-direction:column;gap:6px;width:100%;}
+.draggo-hours-day{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.draggo-hours-name{flex:0 0 28px;font-weight:600;}
+.draggo-hours-closed{display:inline-flex;align-items:center;gap:4px;font-size:12px;opacity:.85;cursor:pointer;flex:0 0 auto;}
+.draggo-hours-closed input{margin:0;}
+.draggo-hours-ranges{display:flex;gap:10px;flex-wrap:wrap;flex:1;transition:opacity .15s;}
+.draggo-hours-range{display:inline-flex;align-items:center;gap:4px;}
+.draggo-hours-range input[type=time]{width:104px;}
+.draggo-hours-sep{opacity:.6;}
+.draggo-hours-copy{align-self:flex-start;margin-top:4px;font-size:12px;background:none;border:1px dashed currentColor;border-radius:6px;padding:3px 8px;cursor:pointer;opacity:.75;}
+.draggo-hours-copy:hover{opacity:1;}
+
+/* ── Cards repeater widget (Tilt-3D cards: image + title + rich text) ── */
+.draggo-cards-ed{display:flex;flex-direction:column;gap:12px;width:100%;}
+.draggo-card-row{border:1px solid rgba(127,127,127,.28);border-radius:10px;padding:12px;background:rgba(127,127,127,.06);display:flex;flex-direction:column;gap:10px;}
+.draggo-card-head{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+.draggo-card-num{font-weight:600;font-size:13px;opacity:.7;}
+.draggo-card-del{background:none;border:1px solid rgba(224,82,96,.6);border-radius:6px;color:#e05260;font-size:12px;line-height:1;padding:4px 9px;cursor:pointer;opacity:.85;}
+.draggo-card-del:hover{opacity:1;background:rgba(224,82,96,.12);}
+.draggo-card-field{display:flex;flex-direction:column;gap:4px;}
+.draggo-card-lbl{font-size:12px;font-weight:600;opacity:.7;}
+.draggo-card-title{width:100%;}
+.draggo-card-img{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.draggo-card-prev{flex:0 0 auto;width:84px;height:52px;border-radius:6px;background-size:cover;background-position:center;background-repeat:no-repeat;display:inline-flex;align-items:center;justify-content:center;border:1px solid rgba(127,127,127,.3);font-size:22px;}
+.draggo-card-prev.is-empty{background:rgba(127,127,127,.12);opacity:.55;}
+
+/* ── KI chat: image attach (screenshot → element) ──────────────────── */
+.draggo-ki-attachbtn{flex:0 0 auto;background:none;border:1px solid rgba(127,127,127,.35);border-radius:8px;font-size:16px;line-height:1;padding:6px 9px;cursor:pointer;align-self:flex-end;}
+.draggo-ki-attachbtn:hover{background:rgba(127,127,127,.12);}
+.draggo-ki-attachbtn:disabled{opacity:.5;cursor:default;}
+.draggo-ki-thumbs{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0;}
+.draggo-ki-thumb{position:relative;width:56px;height:56px;border-radius:8px;background-size:cover;background-position:center;border:1px solid rgba(127,127,127,.3);}
+.draggo-ki-thumb button{position:absolute;top:-7px;right:-7px;width:18px;height:18px;border-radius:50%;border:none;background:#e05260;color:#fff;font-size:11px;line-height:1;cursor:pointer;padding:0;}
+
+/* ── Licence-locked palette items ──────────────────────────────────
+   Shown, not hidden: the free tier should SEE what the full version adds.
+   Click is intercepted in JS and the API rejects the type anyway. */
+.draggo-palette-item.is-locked { opacity: .45; cursor: not-allowed; position: relative; }
+.draggo-palette-item.is-locked:hover { border-color: var(--draggo-border); }
+.draggo-pi-lock { position: absolute; top: 2px; right: 4px; font-size: 10px; line-height: 1; }
+.draggo-structure-item.is-locked { opacity: .45; cursor: not-allowed; }
+.draggo-structure-item.is-locked:hover { border-color: var(--draggo-border); border-style: dashed; }
